@@ -7,6 +7,11 @@ export const MAX_ANALYSES = 1;
 
 export type AnalysisStatus = "running" | "complete" | "failed";
 
+export interface ChatTurn {
+  role: "user" | "model";
+  text: string;
+}
+
 export interface Analysis {
   id: string;
   jobDescription: string;
@@ -15,6 +20,7 @@ export interface Analysis {
   status: AnalysisStatus;
   error?: string;
   downloaded: boolean;
+  chat: ChatTurn[];
 }
 
 export interface Session {
@@ -46,7 +52,7 @@ export function addAnalysis(s: Session, id: string, jobDescription: string, cont
   if (s.resume === null) return { ok: false, reason: "no_resume" };
   if (!jobDescription.trim()) return { ok: false, reason: "empty" };
   if (!canAddAnalysis(s)) return { ok: false, reason: "limit" };
-  const analysis: Analysis = { id, jobDescription, context, report: {}, status: "running", downloaded: false };
+  const analysis: Analysis = { id, jobDescription, context, report: {}, status: "running", downloaded: false, chat: [] };
   // A failed Analysis is replaced, not kept alongside its retry.
   return { ok: true, session: { ...s, analyses: [...liveAnalyses(s), analysis] } };
 }
@@ -69,4 +75,18 @@ export function failAnalysis(s: Session, id: string, message: string): Session {
 
 export function getAnalysis(s: Session, id: string): Analysis | undefined {
   return s.analyses.find((a) => a.id === id);
+}
+
+export function markDownloaded(s: Session, ids: string[]): Session {
+  return { ...s, analyses: s.analyses.map((a) => (ids.includes(a.id) ? { ...a, downloaded: true } : a)) };
+}
+
+// Drives the leave-page warning: a finished Report the user hasn't saved.
+export function hasUndownloadedReports(s: Session): boolean {
+  return s.analyses.some((a) => a.status === "complete" && !a.downloaded);
+}
+
+// Ending a Session deletes everything: the result is a brand new Session.
+export function endSession(_s: Session): Session {
+  return createSession();
 }

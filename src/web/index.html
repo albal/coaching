@@ -8,10 +8,11 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <header class="site-header">
+    <header class="site-header no-print">
       <p class="brand">DevOps Career Coach</p>
+      <button id="end-session" type="button" hidden>End Session</button>
     </header>
-    <main id="app">
+    <main id="app" class="no-print">
       <section class="hero">
         <h1>Land the DevOps role you actually want</h1>
         <p class="lede">Compare your Resume with a Job Description and get an honest Fit Band, the Gaps that matter, and a plan to close them.</p>
@@ -59,17 +60,36 @@
         <button id="analyse" type="submit" class="primary">Analyse</button>
       </form>
 
-      <section id="report" class="card" aria-live="polite" hidden>
-        <h2>Your Report</h2>
-        <p id="report-status" class="muted"></p>
+      <section id="report" class="card" hidden>
+        <div class="report-head">
+          <h2 id="report-title">Your Report</h2>
+          <div id="report-actions" class="actions" hidden>
+            <button id="download" type="button">Download Markdown</button>
+            <button id="print" type="button">Save as PDF</button>
+            <button id="download-all" type="button" hidden>Download all Reports</button>
+          </div>
+        </div>
+        <p id="report-status" class="muted" role="status"></p>
         <div id="tabs" class="tabs" role="tablist" aria-label="Report sections"></div>
         <div id="tab-panel" class="tab-panel" role="tabpanel" tabindex="0"></div>
         <div id="report-error" class="error" role="alert" hidden>
           <p id="report-error-text"></p>
           <button id="retry" type="button">Try again</button>
         </div>
+        <p class="booking" data-booking hidden>Want help landing this role? <a data-booking-link href="#" target="_blank" rel="noopener">Book a session with Al</a>.</p>
       </section>
     </main>
+
+    <main id="ended" class="no-print" hidden>
+      <section class="card ended">
+        <h1 tabindex="-1">Your Session has ended</h1>
+        <p>Your Resume, Job Descriptions and Reports have been cleared from this page. This site never kept a copy.</p>
+        <p class="booking" data-booking hidden>Want help landing the role? <a data-booking-link href="#" target="_blank" rel="noopener">Book a session with Al</a>.</p>
+        <button id="restart" type="button" class="primary">Start a new Session</button>
+      </section>
+    </main>
+
+    <div id="print-view" class="print-only"></div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

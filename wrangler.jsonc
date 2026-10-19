@@ -9,7 +9,9 @@
     "run_worker_first": ["/api/*"]
   },
   "vars": {
-    "GEMINI_MODEL": "gemini-3.5-flash-lite"
+    "GEMINI_MODEL": "gemini-3.5-flash-lite",
+    // Cal.com or Calendly link shown at the end of every Report.
+    "BOOKING_URL": ""
   },
   // Logs carry content-free metadata only (see src/worker/log.ts).
   "observability": { "enabled": true }

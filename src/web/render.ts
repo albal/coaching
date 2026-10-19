@@ -193,3 +193,16 @@ export function tabsFor(analysis: Analysis): Tab[] {
   if (interview) tabs.push({ id: "interview", label: "Interview", render: () => interviewTab(interview) });
   return tabs;
 }
+
+// Every section of a Report on one page, for the browser's print-to-PDF.
+export function printView(analysis: Analysis, bookingUrl: string): HTMLElement {
+  const title = analysis.report.extract?.job.title || "Job Description";
+  return h(
+    "article",
+    null,
+    h("h1", null, `DevOps Career Coach Report: ${title}`),
+    tabsFor(analysis).map((t) => h("section", { class: "print-section" }, h("h2", null, t.label), t.render())),
+    bookingUrl ? h("p", null, "Want help landing this role? Book a session with Al: ", h("a", { href: bookingUrl }, bookingUrl)) : null,
+    h("p", { class: "muted" }, "AI-generated advice: check it before you rely on it. This site kept no copy of your Report."),
+  );
+}

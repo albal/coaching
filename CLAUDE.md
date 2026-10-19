@@ -19,5 +19,5 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 ## Development
 
 - `npm test` runs the Worker HTTP-seam tests (fake Gemini client) and the browser Session model tests.
-- `npm run typecheck`, `npm run build` (Vite → `dist/`), `npm run dev` (build + `wrangler dev`).
+- `npm run typecheck`, `npm run build` (Vite → `dist/`), `npm run dev` (build + `wrangler dev`), `npm run dev:demo` (canned Gemini replies, no key or network needed).
 - Secrets: `GEMINI_API_KEY` (Worker secret; `.dev.vars` locally). CI deploys on push to `main` when `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID` repo secrets exist.

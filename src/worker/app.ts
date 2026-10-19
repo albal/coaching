@@ -4,9 +4,14 @@ import { json, ndjsonStream } from "./http";
 import type { Logger } from "./log";
 import { PipelineError, runAnalysis } from "./pipeline";
 
+export interface PublicConfig {
+  bookingUrl: string;
+}
+
 export interface Deps {
   gemini: GeminiClient;
   log: Logger;
+  config?: PublicConfig;
 }
 
 const ERROR_MESSAGES = {
@@ -50,6 +55,10 @@ async function analyse(req: Request, deps: Deps): Promise<Response> {
 
 export async function handleApi(req: Request, deps: Deps): Promise<Response> {
   const { pathname } = new URL(req.url);
+  if (pathname === "/api/config") {
+    // Non-secret settings the page needs at runtime.
+    return json({ bookingUrl: deps.config?.bookingUrl ?? "" } satisfies PublicConfig);
+  }
   if (pathname === "/api/analyse") {
     if (req.method !== "POST") return json({ type: "error", code: "bad_request", message: "Use POST." }, 405);
     return analyse(req, deps);

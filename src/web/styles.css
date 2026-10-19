@@ -119,3 +119,22 @@ label.button {
 .visually-hidden:focus-visible + p, .visually-hidden:focus + p { outline: none; }
 .upload:focus-within label.button { outline: 3px solid var(--accent); outline-offset: 2px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.site-header { display: flex; justify-content: space-between; align-items: center; }
+.report-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.report-head h2 { margin: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.booking { margin-top: 24px; padding-top: 16px; border-top: 1px solid var(--border); }
+a { color: var(--accent); }
+.ended { text-align: center; margin-top: 48px; }
+.ended h1:focus { outline: none; }
+.print-only { display: none; }
+@media print {
+  :root { color-scheme: light; --text: #000; --muted: #444; --border: #bbb; --bg: #fff; --surface: #fff; }
+  body { background: #fff; font-size: 11pt; }
+  .no-print { display: none !important; }
+  .print-only { display: block; }
+  .print-section { break-before: page; }
+  .print-section:first-of-type { break-before: auto; }
+  .req, li { break-inside: avoid; }
+  a { color: #000; }
+}
