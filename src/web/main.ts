@@ -1,6 +1,6 @@
 import { OUT_OF_CREDIT_MESSAGE, type AnalysisContext, type AnalysisEvent } from "../shared/report";
 import { streamAnalysis, streamChat, verify } from "./api";
-import { mountTurnstile, takeToken } from "./turnstile";
+import { mountTurnstile, nextToken, resetTurnstile, turnstileState } from "./turnstile";
 import { h } from "./dom";
 import { fileNameFor, reportToMarkdown, reportsOf, sessionToMarkdown, titleOf } from "./export";
 import { EXTRACT_MESSAGES, extractText } from "./extract";
@@ -161,12 +161,12 @@ async function ask(question: string) {
   $<HTMLTextAreaElement>("chat-input").value = "";
   render();
   let failed: string | null = null;
-  const currentPass = await ensurePass();
-  if (!currentPass) failed = NEEDS_CHECK;
+  const checked = await ensurePass();
+  if ("error" in checked) failed = checked.error;
   else
     await streamChat(
       { resume: session.resume!, jobDescription: analysis.jobDescription, report: analysis.report, history: analysis.chat, message: question },
-      currentPass,
+      checked.pass,
       (e) => {
         if (!pendingChat || pendingChat.id !== id) return;
         if (e.type === "delta") pendingChat.reply += e.text;
@@ -237,22 +237,41 @@ function readContext(): AnalysisContext {
 }
 
 // Gets (or reuses) the pass that unlocks the coach for this Session.
-async function ensurePass(): Promise<string | null> {
-  if (pass) return pass;
-  const token = turnstileSiteKey ? takeToken() : "";
-  if (turnstileSiteKey && !token) return null;
+const NEEDS_CHECK = "Please complete the quick security check below, then try again.";
+const CHECK_BLOCKED =
+  "The security check couldn't load. If you use an ad or tracker blocker, allow challenges.cloudflare.com, then reload the page.";
+const CHECK_FAILED = "The security check didn't pass. Please try it again.";
+
+// Gets (or reuses) the pass that unlocks the coach for this Session, waiting
+// for the page's settings and the Turnstile check if they aren't ready yet.
+async function ensurePass(): Promise<{ pass: string } | { error: string }> {
+  if (pass) return { pass };
+  if (!(await configReady)) configReady = loadConfig();
+  if (!(await configReady)) return { error: "Couldn't reach the coach. Check your connection and try again." };
+  let token = "";
+  if (turnstileSiteKey) {
+    if (turnstileState() === "loading") showFormError("Running a quick security check…");
+    token = await nextToken();
+    showFormError(null);
+    if (!token) return { error: turnstileState() === "failed" ? CHECK_BLOCKED : NEEDS_CHECK };
+  }
   pass = await verify(token);
-  return pass;
+  if (!pass) {
+    resetTurnstile();
+    return { error: CHECK_FAILED };
+  }
+  return { pass };
 }
 
-const NEEDS_CHECK = "Please complete the quick check below, then try again.";
-
 async function run(jobDescription: string) {
-  const currentPass = await ensurePass();
-  if (!currentPass) {
-    showFormError(NEEDS_CHECK);
+  analyseButton.disabled = true;
+  const checked = await ensurePass();
+  analyseButton.disabled = false;
+  if ("error" in checked) {
+    showFormError(checked.error);
     return;
   }
+  const currentPass = checked.pass;
   const id = crypto.randomUUID();
   const context = readContext();
   const added = addAnalysis(session, id, jobDescription, context);
@@ -461,13 +480,21 @@ for (const a of document.querySelectorAll<HTMLAnchorElement>("[data-booking-link
 wireUpload("resume-file", resumeInput, "resume-file-status", "Resume");
 wireUpload("jd-file", jdInput, "jd-file-status", "Job Description");
 
-void fetch("/api/config")
-  .then((r) => r.json() as Promise<{ bookingUrl?: string; turnstileSiteKey?: string; available?: boolean }>)
-  .then((c) => {
+// Resolves true once the page has its runtime settings.
+async function loadConfig(): Promise<boolean> {
+  try {
+    const res = await fetch("/api/config");
+    if (!res.ok) return false;
+    const c = (await res.json()) as { bookingUrl?: string; turnstileSiteKey?: string; available?: boolean };
     if (c.available === false) lockOut();
     bookingUrl = c.bookingUrl ?? "";
     turnstileSiteKey = c.turnstileSiteKey ?? "";
     renderBooking();
     mountTurnstile($("turnstile"), turnstileSiteKey);
-  })
-  .catch(() => {});
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+let configReady = loadConfig();
