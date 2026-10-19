@@ -52,6 +52,12 @@ function showFormError(message: string | null) {
   formError.textContent = message ?? "";
 }
 
+// Content-free usage counts: just the event name, nothing about the user.
+function track(name: "download" | "booking_click") {
+  const body = new Blob([JSON.stringify({ name })], { type: "application/json" });
+  if (!navigator.sendBeacon?.("/api/event", body)) void fetch("/api/event", { method: "POST", body, keepalive: true }).catch(() => {});
+}
+
 function renderBooking() {
   for (const el of document.querySelectorAll<HTMLElement>("[data-booking]")) el.hidden = !bookingUrl;
   for (const a of document.querySelectorAll<HTMLAnchorElement>("[data-booking-link]")) a.href = bookingUrl || "#";
@@ -287,6 +293,7 @@ function downloadCurrent() {
   if (!analysis) return;
   saveFile(fileNameFor(titleOf(analysis)), reportToMarkdown(analysis, { bookingUrl, includeChat: includeChat() }));
   session = markDownloaded(session, [analysis.id]);
+  track("download");
 }
 
 function downloadAll() {
@@ -294,6 +301,7 @@ function downloadAll() {
   if (!reports.length) return;
   saveFile("devops-coach-all-reports.md", sessionToMarkdown(session, { bookingUrl, includeChat: includeChat() }));
   session = markDownloaded(session, reports.map((a) => a.id));
+  track("download");
 }
 
 function printCurrent() {
@@ -301,6 +309,7 @@ function printCurrent() {
   if (!analysis) return;
   $("print-view").replaceChildren(printView(analysis, bookingUrl, includeChat()));
   session = markDownloaded(session, [analysis.id]);
+  track("download");
   window.print();
 }
 
@@ -426,6 +435,10 @@ function wireUpload(inputId: string, target: HTMLTextAreaElement, statusId: stri
       status.classList.add("error");
     }
   });
+}
+
+for (const a of document.querySelectorAll<HTMLAnchorElement>("[data-booking-link]")) {
+  a.addEventListener("click", () => track("booking_click"));
 }
 
 wireUpload("resume-file", resumeInput, "resume-file-status", "Resume");

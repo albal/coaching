@@ -19,6 +19,8 @@ export interface Env {
   TURNSTILE_SECRET_KEY?: string;
   // Signs Turnstile passes and keys hashed IP counters.
   PASS_SECRET?: string;
+  // Bearer token for GET /api/metrics; the endpoint is off without it.
+  METRICS_TOKEN?: string;
   ANALYSES_PER_IP_PER_HOUR?: string;
   DAILY_ANALYSIS_CAP?: string;
   ANALYSE_BURST: RateLimiter;
@@ -31,7 +33,7 @@ export interface Env {
 
 const DEMO_PASS_SECRET = "demo-mode-only";
 
-function protectionFor(env: Env): Protection | null {
+function servicesFor(env: Env): { protection: Protection; usage: ReturnType<typeof usageClient> } | null {
   const demo = env.DEMO_GEMINI === "1";
   const passSecret = env.PASS_SECRET || (demo ? DEMO_PASS_SECRET : "");
   if (!passSecret || (!env.TURNSTILE_SECRET_KEY && !demo)) return null; // fail closed
@@ -39,19 +41,23 @@ function protectionFor(env: Env): Protection | null {
     perHour: Number(env.ANALYSES_PER_IP_PER_HOUR ?? 5),
     perDay: Number(env.DAILY_ANALYSIS_CAP ?? 300),
   };
+  const usage = usageClient(env.USAGE_GUARD, limits, (ip) => ipKey(passSecret, ip));
   return {
-    verifyHuman: env.TURNSTILE_SECRET_KEY ? createTurnstileVerifier(env.TURNSTILE_SECRET_KEY) : async () => true,
-    passes: createPasses(passSecret),
-    burst: { analyse: env.ANALYSE_BURST, chat: env.CHAT_BURST },
-    usage: usageClient(env.USAGE_GUARD, limits, (ip) => ipKey(passSecret, ip)),
+    usage,
+    protection: {
+      verifyHuman: env.TURNSTILE_SECRET_KEY ? createTurnstileVerifier(env.TURNSTILE_SECRET_KEY) : async () => true,
+      passes: createPasses(passSecret),
+      burst: { analyse: env.ANALYSE_BURST, chat: env.CHAT_BURST },
+      usage,
+    },
   };
 }
 
 export default {
   async fetch(req: Request, env: Env): Promise<Response> {
     if (!new URL(req.url).pathname.startsWith("/api/")) return env.ASSETS.fetch(req);
-    const protection = protectionFor(env);
-    if (!protection) {
+    const services = servicesFor(env);
+    if (!services) {
       consoleLogger.event({ event: "misconfigured", code: "protection" });
       return json({ type: "error", code: "upstream", message: "The coach isn't available right now." }, 503);
     }
@@ -60,7 +66,9 @@ export default {
     return handleApi(req, {
       gemini,
       log: consoleLogger,
-      protection,
+      protection: services.protection,
+      metrics: services.usage,
+      metricsToken: env.METRICS_TOKEN,
       config: { bookingUrl: env.BOOKING_URL ?? "", turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? "" },
     });
   },

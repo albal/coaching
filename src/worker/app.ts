@@ -1,15 +1,21 @@
 import { chatHistorySchema, MAX_CHAT_TURNS, userTurns, type ChatEvent } from "../shared/chat";
 import { contextSchema, LIMITS, type AnalysisEvent, type ErrorCode } from "../shared/report";
 import type { GeminiClient } from "./gemini";
-import { json, ndjsonStream } from "./http";
+import { json, ndjsonStream, SECURITY_HEADERS } from "./http";
 import type { Logger } from "./log";
 import { PipelineError, runAnalysis } from "./pipeline";
 import { PASS_HEADER, type Protection } from "./protection";
 import { chatSystem } from "./prompts";
+import { METRICS, type DailyMetrics, type Metric } from "./usage-guard";
 
 export interface PublicConfig {
   bookingUrl: string;
   turnstileSiteKey: string;
+}
+
+export interface Metrics {
+  count(metric: Metric): Promise<void>;
+  metrics(): Promise<DailyMetrics>;
 }
 
 export interface Deps {
@@ -17,6 +23,19 @@ export interface Deps {
   log: Logger;
   protection: Protection;
   config?: Partial<PublicConfig>;
+  // Content-free usage counts; optional because nothing depends on them.
+  metrics?: Metrics;
+  // Bearer token for reading metrics; the endpoint is off without one.
+  metricsToken?: string;
+}
+
+// Metrics must never break a request.
+async function count(deps: Deps, metric: Metric): Promise<void> {
+  try {
+    await deps.metrics?.count(metric);
+  } catch {
+    deps.log.event({ event: "metric_failed", code: metric });
+  }
 }
 
 const ERROR_MESSAGES = {
@@ -108,6 +127,7 @@ async function analyse(req: Request, deps: Deps): Promise<Response> {
       await runAnalysis(deps.gemini, deps.log, { resume, jobDescription, context: context.data }, emit);
       emit({ type: "done" });
       deps.log.event({ event: "analysis_completed" });
+      await count(deps, "analysis_completed");
     } catch (err) {
       const code = err instanceof PipelineError ? err.code : "upstream";
       emit({ type: "error", code, message: ERROR_MESSAGES[code] });
@@ -153,7 +173,37 @@ async function chat(req: Request, deps: Deps): Promise<Response> {
   });
 }
 
+// Events the page reports. Analyses are counted by the Worker itself.
+const PAGE_EVENTS: Metric[] = ["download", "booking_click"];
+
+async function event(req: Request, deps: Deps): Promise<Response> {
+  const { success } = await deps.protection.burst.chat.limit({ key: clientIp(req) });
+  if (!success) return tooFast();
+  const body = await readBody(req);
+  const name = body && body !== "too_large" ? body.name : null;
+  if (!PAGE_EVENTS.includes(name as Metric)) return badRequest("Unknown event.");
+  await count(deps, name as Metric);
+  return new Response(null, { status: 204, headers: SECURITY_HEADERS });
+}
+
+function sameToken(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function readMetrics(req: Request, deps: Deps): Promise<Response> {
+  const auth = req.headers.get("authorization") ?? "";
+  if (!deps.metricsToken || !deps.metrics) return fail(404, "bad_request", "Not found.");
+  if (!sameToken(auth, `Bearer ${deps.metricsToken}`)) return fail(401, "bad_request", "Unauthorised.");
+  const days = await deps.metrics.metrics();
+  const totals = Object.fromEntries(METRICS.map((m) => [m, Object.values(days).reduce((n, d) => n + (d[m] ?? 0), 0)]));
+  return json({ days, totals });
+}
+
 const ROUTES: Record<string, (req: Request, deps: Deps) => Promise<Response>> = {
+  "/api/event": event,
   "/api/verify": verify,
   "/api/analyse": analyse,
   "/api/chat": chat,
@@ -167,6 +217,10 @@ export async function handleApi(req: Request, deps: Deps): Promise<Response> {
       bookingUrl: deps.config?.bookingUrl ?? "",
       turnstileSiteKey: deps.config?.turnstileSiteKey ?? "",
     } satisfies PublicConfig);
+  }
+  if (pathname === "/api/metrics") {
+    if (req.method !== "GET") return fail(405, "bad_request", "Use GET.");
+    return readMetrics(req, deps);
   }
   const route = ROUTES[pathname];
   if (!route) return fail(404, "bad_request", "Not found.");

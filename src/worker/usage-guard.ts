@@ -1,8 +1,14 @@
 import type { Reservation } from "./protection";
 
-// A single Durable Object holding the content-free counters behind the
-// per-IP hourly limit and the global daily cap. It never sees user content:
-// only a hashed IP key and the limits to apply.
+// A single Durable Object holding content-free counters: the per-IP hourly
+// limit, the global daily cap, and daily usage metrics. It never sees user
+// content: only a hashed IP key, the limits to apply and metric names.
+
+export const METRICS = ["analysis_completed", "download", "booking_click"] as const;
+export type Metric = (typeof METRICS)[number];
+export type DailyMetrics = Record<string, Partial<Record<Metric, number>>>;
+
+const METRIC_DAYS = 90;
 
 interface Storage {
   get<T>(key: string): Promise<T | undefined>;
@@ -30,8 +36,28 @@ export class UsageGuard {
   ) {}
 
   async fetch(req: Request): Promise<Response> {
+    const { pathname } = new URL(req.url);
+    if (pathname === "/count") {
+      await this.count(((await req.json()) as { metric: Metric }).metric);
+      return Response.json({ ok: true });
+    }
+    if (pathname === "/metrics") return Response.json(await this.metrics());
     const { key, perHour, perDay } = (await req.json()) as ReserveRequest;
     return Response.json({ result: await this.reserve(key, perHour, perDay) });
+  }
+
+  async count(metric: Metric): Promise<void> {
+    if (!METRICS.includes(metric)) return;
+    const day = new Date(this.now()).toISOString().slice(0, 10);
+    const all = (await this.state.storage.get<DailyMetrics>("metrics")) ?? {};
+    all[day] = { ...all[day], [metric]: (all[day]?.[metric] ?? 0) + 1 };
+    const oldest = new Date(this.now() - METRIC_DAYS * 24 * HOUR_MS).toISOString().slice(0, 10);
+    for (const d of Object.keys(all)) if (d < oldest) delete all[d];
+    await this.state.storage.put("metrics", all);
+  }
+
+  async metrics(): Promise<DailyMetrics> {
+    return (await this.state.storage.get<DailyMetrics>("metrics")) ?? {};
   }
 
   async reserve(key: string, perHour: number, perDay: number): Promise<Reservation> {
@@ -66,10 +92,18 @@ export interface DurableObjectNamespaceLike {
 
 export function usageClient(ns: DurableObjectNamespaceLike, limits: { perHour: number; perDay: number }, hashIp: (ip: string) => Promise<string>) {
   const stub = () => ns.get(ns.idFromName("global"));
+  const call = (path: string, body?: unknown) =>
+    stub().fetch(new Request(`https://usage-guard${path}`, { method: "POST", body: body === undefined ? null : JSON.stringify(body) }));
   return {
+    async count(metric: Metric): Promise<void> {
+      await call("/count", { metric });
+    },
+    async metrics(): Promise<DailyMetrics> {
+      return (await (await call("/metrics")).json()) as DailyMetrics;
+    },
     async reserveAnalysis(ip: string): Promise<Reservation> {
       const body: ReserveRequest = { key: await hashIp(ip), ...limits };
-      const res = await stub().fetch(new Request("https://usage-guard/reserve", { method: "POST", body: JSON.stringify(body) }));
+      const res = await call("/reserve", body);
       return ((await res.json()) as { result: Reservation }).result;
     },
   };
