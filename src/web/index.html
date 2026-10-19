@@ -77,6 +77,7 @@
             <button id="download" type="button">Download Markdown</button>
             <button id="print" type="button">Save as PDF</button>
             <button id="download-all" type="button" hidden>Download all Reports</button>
+            <label class="inline"><input id="include-chat" type="checkbox" /> Include Coaching Chat in downloads</label>
           </div>
         </div>
         <nav id="analyses" class="analyses" aria-label="Your Reports" hidden></nav>
@@ -84,6 +85,20 @@
         <p id="off-domain" class="callout" hidden>This doesn't look like a DevOps or related role, so the coaching may be less useful. We've analysed it anyway.</p>
         <div id="tabs" class="tabs" role="tablist" aria-label="Report sections"></div>
         <div id="tab-panel" class="tab-panel" role="tabpanel" tabindex="0"></div>
+        <section id="chat" class="chat" aria-labelledby="chat-title" hidden>
+          <h3 id="chat-title">Coaching Chat</h3>
+          <p class="muted">Ask follow-up questions about this Report. The coach knows your Resume, this Job Description and the Report.</p>
+          <ol id="chat-log" class="chat-log" aria-live="polite"></ol>
+          <form id="chat-form" novalidate>
+            <label for="chat-input" class="visually-hidden">Your question</label>
+            <textarea id="chat-input" rows="3" maxlength="2000" placeholder="e.g. How should I explain my GitLab CI experience for a GitHub Actions role?"></textarea>
+            <div class="chat-row">
+              <button id="chat-send" type="submit" class="primary">Ask the coach</button>
+              <p id="chat-left" class="muted" role="status"></p>
+            </div>
+            <p id="chat-error" class="error" role="alert" hidden></p>
+          </form>
+        </section>
         <div id="report-error" class="error" role="alert" hidden>
           <p id="report-error-text"></p>
           <button id="retry" type="button">Try again</button>

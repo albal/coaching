@@ -1,4 +1,5 @@
-import type { AnalysisContext, AnalysisEvent } from "../shared/report";
+import type { ChatEvent, ChatTurn } from "../shared/chat";
+import type { AnalysisContext, AnalysisEvent, Report } from "../shared/report";
 
 // Reads a newline-delimited JSON stream, calling onEvent for each line.
 export async function readNdjson<T>(res: Response, onEvent: (e: T) => void): Promise<void> {
@@ -34,6 +35,29 @@ export async function streamAnalysis(
   }
   if (!res.ok || !res.body) {
     const err = (await res.json().catch(() => null)) as AnalysisEvent | null;
+    onEvent(err?.type === "error" ? err : { type: "error", code: "upstream", message: "Something went wrong. Please try again." });
+    return;
+  }
+  await readNdjson(res, onEvent);
+}
+
+export async function streamChat(
+  body: { resume: string; jobDescription: string; report: Report; history: ChatTurn[]; message: string },
+  onEvent: (e: ChatEvent) => void,
+): Promise<void> {
+  let res: Response;
+  try {
+    res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  } catch {
+    onEvent({ type: "error", code: "upstream", message: "Couldn't reach the coach. Check your connection and try again." });
+    return;
+  }
+  if (!res.ok || !res.body) {
+    const err = (await res.json().catch(() => null)) as ChatEvent | null;
     onEvent(err?.type === "error" ? err : { type: "error", code: "upstream", message: "Something went wrong. Please try again." });
     return;
   }

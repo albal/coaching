@@ -143,3 +143,13 @@ a { color: var(--accent); }
 #analyses-left { margin: 8px 0 0; }
 #change-resume-panel { margin-top: 12px; }
 #change-resume-panel p { margin-top: 0; }
+.chat { margin-top: 24px; padding-top: 8px; border-top: 1px solid var(--border); }
+.chat-log { list-style: none; padding: 0; margin: 0 0 12px; }
+.chat-turn { padding: 8px 12px; border-radius: 6px; margin: 8px 0; white-space: pre-wrap; }
+.chat-turn p { margin: 0; }
+.chat-user { background: var(--bg); border: 1px solid var(--border); }
+.chat-model { border-left: 3px solid var(--accent); }
+.chat-who { font-size: 0.8rem; font-weight: 600; color: var(--muted); }
+.chat-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 8px; }
+.chat-row p { margin: 0; }
+label.inline { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; margin: 0; }

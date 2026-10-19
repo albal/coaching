@@ -115,3 +115,11 @@ export function interviewPrompt(input: AnalysisInput, report: unknown): string {
 
 ${common(input, report)}`;
 }
+
+export function chatSystem(input: AnalysisInput, report: unknown): string {
+  return `${COACH_SYSTEM}
+
+You are now in a Coaching Chat with the candidate about one Analysis: their Resume against one Job Description, and the Report already produced. Answer their follow-up questions concisely and practically, in plain text with short paragraphs or lists. Stay on their job search and this role. Ground every answer in the data below.
+
+${common(input, report)}`;
+}

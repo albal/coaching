@@ -1,5 +1,5 @@
 import type { AnalysisContext, AnalysisEvent } from "../shared/report";
-import { streamAnalysis } from "./api";
+import { streamAnalysis, streamChat } from "./api";
 import { h } from "./dom";
 import { fileNameFor, reportToMarkdown, reportsOf, sessionToMarkdown, titleOf } from "./export";
 import { EXTRACT_MESSAGES, extractText } from "./extract";
@@ -13,6 +13,9 @@ import {
   failAnalysis,
   getAnalysis,
   canAddAnalysis,
+  canChat,
+  chatQuestionsLeft,
+  recordExchange,
   hasUndownloadedReports,
   MAX_ANALYSES,
   markDownloaded,
@@ -27,6 +30,8 @@ let session: Session = createSession();
 let currentId: string | null = null;
 let activeTab = "fit";
 let bookingUrl = "";
+// The question and reply in flight; recorded on the Session only once complete.
+let pendingChat: { id: string; question: string; reply: string } | null = null;
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 
@@ -102,6 +107,59 @@ function render() {
   $("report-error-text").textContent = analysis.error ?? "";
   $("report-actions").hidden = analysis.status !== "complete";
   $("download-all").hidden = reportsOf(session).length < 2;
+  renderChat(analysis);
+}
+
+function renderChat(analysis: Analysis) {
+  const section = $("chat");
+  section.hidden = analysis.status !== "complete";
+  if (section.hidden) return;
+  const turns = [...analysis.chat];
+  const pending = pendingChat?.id === analysis.id ? pendingChat : null;
+  if (pending) turns.push({ role: "user", text: pending.question }, { role: "model", text: pending.reply || "…" });
+  $("chat-log").replaceChildren(
+    ...turns.map((t) => h("li", { class: `chat-turn chat-${t.role}` }, h("p", { class: "chat-who" }, t.role === "user" ? "You" : "Coach"), h("p", null, t.text))),
+  );
+  const left = chatQuestionsLeft(session, analysis.id);
+  $("chat-left").textContent = left
+    ? `${left} question${left === 1 ? "" : "s"} left in this Coaching Chat.`
+    : "You've reached the limit for this Coaching Chat. Download your Report to keep it, or book a session for more help.";
+  $<HTMLButtonElement>("chat-send").disabled = !!pendingChat || !canChat(session, analysis.id);
+  $<HTMLTextAreaElement>("chat-input").disabled = !canChat(session, analysis.id);
+}
+
+async function ask(question: string) {
+  const analysis = current();
+  if (!analysis || pendingChat || !canChat(session, analysis.id)) return;
+  const id = analysis.id;
+  const chatError = $("chat-error");
+  chatError.hidden = true;
+  pendingChat = { id, question, reply: "" };
+  $<HTMLTextAreaElement>("chat-input").value = "";
+  render();
+  let failed: string | null = null;
+  await streamChat(
+    { resume: session.resume!, jobDescription: analysis.jobDescription, report: analysis.report, history: analysis.chat, message: question },
+    (e) => {
+      if (!pendingChat || pendingChat.id !== id) return;
+      if (e.type === "delta") pendingChat.reply += e.text;
+      else if (e.type === "error") failed = e.message;
+      render();
+    },
+  );
+  const reply = pendingChat?.id === id ? pendingChat.reply.trim() : "";
+  pendingChat = null;
+  if (!getAnalysis(session, id)) return; // the Session ended mid-reply
+  if (failed || !reply) {
+    // Nothing is recorded, so the question can simply be asked again.
+    $<HTMLTextAreaElement>("chat-input").value = question;
+    chatError.textContent = failed ?? "The coach didn't reply. Please try again.";
+    chatError.hidden = false;
+  } else {
+    const recorded = recordExchange(session, id, question, reply);
+    if (recorded.ok) session = recorded.session;
+  }
+  render();
 }
 
 function renderTabs(analysis: Analysis) {
@@ -183,6 +241,8 @@ function saveFile(name: string, markdown: string) {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
+const includeChat = () => $<HTMLInputElement>("include-chat").checked;
+
 function current(): Analysis | undefined {
   const analysis = currentId ? getAnalysis(session, currentId) : undefined;
   return analysis?.status === "complete" ? analysis : undefined;
@@ -191,21 +251,21 @@ function current(): Analysis | undefined {
 function downloadCurrent() {
   const analysis = current();
   if (!analysis) return;
-  saveFile(fileNameFor(titleOf(analysis)), reportToMarkdown(analysis, { bookingUrl }));
+  saveFile(fileNameFor(titleOf(analysis)), reportToMarkdown(analysis, { bookingUrl, includeChat: includeChat() }));
   session = markDownloaded(session, [analysis.id]);
 }
 
 function downloadAll() {
   const reports = reportsOf(session);
   if (!reports.length) return;
-  saveFile("devops-coach-all-reports.md", sessionToMarkdown(session, { bookingUrl }));
+  saveFile("devops-coach-all-reports.md", sessionToMarkdown(session, { bookingUrl, includeChat: includeChat() }));
   session = markDownloaded(session, reports.map((a) => a.id));
 }
 
 function printCurrent() {
   const analysis = current();
   if (!analysis) return;
-  $("print-view").replaceChildren(printView(analysis, bookingUrl));
+  $("print-view").replaceChildren(printView(analysis, bookingUrl, includeChat()));
   session = markDownloaded(session, [analysis.id]);
   window.print();
 }
@@ -222,6 +282,7 @@ function changeResume(download: boolean) {
   if (download) downloadAll();
   session = endSession(session);
   currentId = null;
+  pendingChat = null;
   resumeInput.readOnly = false;
   $("change-resume-panel").hidden = true;
   render();
@@ -233,6 +294,7 @@ function end() {
   if (hasUndownloadedReports(session) && !confirm("You have Reports you haven't downloaded. End the Session and delete them?")) return;
   session = endSession(session);
   currentId = null;
+  pendingChat = null;
   resetForm();
   render();
   $("app").hidden = true;
@@ -261,6 +323,17 @@ form.addEventListener("submit", (ev) => {
 });
 
 $("retry").addEventListener("click", () => void run(jdInput.value));
+$("chat-form").addEventListener("submit", (ev) => {
+  ev.preventDefault();
+  const question = $<HTMLTextAreaElement>("chat-input").value.trim();
+  if (question) void ask(question);
+});
+$("chat-input").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && !ev.shiftKey) {
+    ev.preventDefault();
+    $<HTMLFormElement>("chat-form").requestSubmit();
+  }
+});
 $("download").addEventListener("click", downloadCurrent);
 $("download-all").addEventListener("click", downloadAll);
 $("print").addEventListener("click", printCurrent);

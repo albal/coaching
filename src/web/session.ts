@@ -1,4 +1,7 @@
+import { MAX_CHAT_TURNS, userTurns, type ChatTurn } from "../shared/chat";
 import type { AnalysisContext, Report, SectionName } from "../shared/report";
+
+export type { ChatTurn };
 
 // The browser Session model: the only store of user content (ADR-0001).
 // Pure functions over immutable state; no DOM, no storage.
@@ -6,11 +9,6 @@ import type { AnalysisContext, Report, SectionName } from "../shared/report";
 export const MAX_ANALYSES = 3;
 
 export type AnalysisStatus = "running" | "complete" | "failed";
-
-export interface ChatTurn {
-  role: "user" | "model";
-  text: string;
-}
 
 export interface Analysis {
   id: string;
@@ -91,4 +89,26 @@ export function hasUndownloadedReports(s: Session): boolean {
 // (the UI offers a download first).
 export function endSession(_s: Session): Session {
   return createSession();
+}
+
+export function canChat(s: Session, id: string): boolean {
+  const a = getAnalysis(s, id);
+  return a?.status === "complete" && userTurns(a.chat) < MAX_CHAT_TURNS;
+}
+
+export function chatQuestionsLeft(s: Session, id: string): number {
+  const a = getAnalysis(s, id);
+  return a ? Math.max(0, MAX_CHAT_TURNS - userTurns(a.chat)) : 0;
+}
+
+// Records one finished exchange, so history always ends on the coach's reply.
+export function recordExchange(s: Session, id: string, question: string, reply: string): Result {
+  if (!canChat(s, id)) return { ok: false, reason: "chat_limit" };
+  return {
+    ok: true,
+    session: update(s, id, (a) => ({
+      ...a,
+      chat: [...a.chat, { role: "user", text: question }, { role: "model", text: reply }],
+    })),
+  };
 }

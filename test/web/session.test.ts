@@ -2,15 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   addAnalysis,
   canAddAnalysis,
+  canChat,
+  chatQuestionsLeft,
   completeAnalysis,
   createSession,
   endSession,
   failAnalysis,
   getAnalysis,
+  recordExchange,
   recordSection,
   setResume,
   type Session,
 } from "../../src/web/session";
+import { MAX_CHAT_TURNS } from "../../src/shared/chat";
 import { ASSESS, JOB, RESUME } from "../support/fixtures";
 
 function ok(r: { ok: true; session: Session } | { ok: false; reason: string }): Session {
@@ -74,5 +78,32 @@ describe("multiple Analyses", () => {
     expect(s.analyses).toEqual([]);
     s = ok(setResume(s, "A different Resume"));
     expect(s).toEqual({ resume: "A different Resume", analyses: [] });
+  });
+});
+
+describe("Coaching Chat", () => {
+  const complete = () => completeAnalysis(ok(addAnalysis(ok(setResume(createSession(), RESUME)), "a", JOB)), "a");
+
+  it("is only available once the Analysis is complete", () => {
+    const running = ok(addAnalysis(ok(setResume(createSession(), RESUME)), "a", JOB));
+    expect(canChat(running, "a")).toBe(false);
+    expect(canChat(complete(), "a")).toBe(true);
+  });
+
+  it("records each finished exchange on its own Analysis", () => {
+    const s = ok(recordExchange(complete(), "a", "How?", "Like this."));
+    expect(getAnalysis(s, "a")!.chat).toEqual([
+      { role: "user", text: "How?" },
+      { role: "model", text: "Like this." },
+    ]);
+    expect(chatQuestionsLeft(s, "a")).toBe(MAX_CHAT_TURNS - 1);
+  });
+
+  it(`stops at ${MAX_CHAT_TURNS} questions per Analysis`, () => {
+    let s = complete();
+    for (let i = 0; i < MAX_CHAT_TURNS; i++) s = ok(recordExchange(s, "a", `q${i}`, `a${i}`));
+    expect(canChat(s, "a")).toBe(false);
+    expect(chatQuestionsLeft(s, "a")).toBe(0);
+    expect(recordExchange(s, "a", "more", "no")).toEqual({ ok: false, reason: "chat_limit" });
   });
 });
