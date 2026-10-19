@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>DevOps Career Coach</title>
+    <meta name="description" content="Honest gap analysis and coaching for DevOps, SRE and Platform engineers. Nothing you upload is stored." />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <p class="brand">DevOps Career Coach</p>
+    </header>
+    <main id="app">
+      <section class="hero">
+        <h1>Land the DevOps role you actually want</h1>
+        <p class="lede">Compare your Resume with a Job Description and get an honest Fit Band, the Gaps that matter, and a plan to close them.</p>
+        <p class="promise">This site never stores your Resume or results. Everything disappears when you close the tab.</p>
+      </section>
+
+      <form id="analysis-form" class="card" novalidate>
+        <div class="field">
+          <label for="resume">Your Resume</label>
+          <textarea id="resume" name="resume" rows="12" placeholder="Paste your Resume text here" required></textarea>
+        </div>
+        <div class="field">
+          <label for="job-description">Job Description</label>
+          <textarea id="job-description" name="jobDescription" rows="12" placeholder="Paste the Job Description here" required></textarea>
+        </div>
+        <p id="form-error" class="error" role="alert" hidden></p>
+        <button id="analyse" type="submit" class="primary">Analyse</button>
+      </form>
+
+      <section id="report" class="card" aria-live="polite" hidden>
+        <h2>Your Report</h2>
+        <p id="report-status" class="muted"></p>
+        <div id="fit" class="fit" hidden>
+          <p class="fit-label">Fit Band</p>
+          <p id="fit-band" class="fit-band"></p>
+          <p id="fit-reason"></p>
+        </div>
+        <div id="report-error" class="error" role="alert" hidden>
+          <p id="report-error-text"></p>
+          <button id="retry" type="button">Try again</button>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

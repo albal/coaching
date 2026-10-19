@@ -1,0 +1,78 @@
+:root {
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --text: #1b1f24;
+  --muted: #5b6470;
+  --border: #d9dee5;
+  --accent: #1f6feb;
+  --accent-text: #ffffff;
+  --danger: #b42318;
+  --strong: #1a7f37;
+  --stretch: #9a6700;
+  --long: #b42318;
+  color-scheme: light dark;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --text: #e6edf3;
+    --muted: #9da7b3;
+    --border: #30363d;
+    --accent: #4493f8;
+    --accent-text: #0d1117;
+    --danger: #f85149;
+    --strong: #3fb950;
+    --stretch: #d29922;
+    --long: #f85149;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.site-header, main { max-width: 860px; margin: 0 auto; padding: 0 16px; }
+.brand { font-weight: 700; margin: 16px 0; }
+.hero h1 { font-size: clamp(1.6rem, 4vw, 2.2rem); line-height: 1.2; margin: 24px 0 8px; }
+.lede { color: var(--muted); margin: 0 0 8px; }
+.promise { font-weight: 600; }
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 20px;
+  margin: 20px 0;
+}
+.field { margin-bottom: 16px; }
+label { display: block; font-weight: 600; margin-bottom: 6px; }
+textarea, input[type="text"], select {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+}
+button {
+  font: inherit;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  padding: 8px 16px;
+  cursor: pointer;
+}
+button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+button:focus-visible, textarea:focus-visible, input:focus-visible, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.muted { color: var(--muted); }
+.error { color: var(--danger); }
+.fit-label { margin: 0; color: var(--muted); font-size: 0.9rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.fit-band { font-size: 1.8rem; font-weight: 700; margin: 4px 0; }
+.fit-band[data-band="strong_fit"] { color: var(--strong); }
+.fit-band[data-band="stretch"] { color: var(--stretch); }
+.fit-band[data-band="long_shot"] { color: var(--long); }

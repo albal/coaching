@@ -1,0 +1,3 @@
+# Copy to .dev.vars for local development. Must be a key from a prepaid,
+# billing-enabled Google Cloud project: never a free-tier key (ADR-0002).
+GEMINI_API_KEY=
