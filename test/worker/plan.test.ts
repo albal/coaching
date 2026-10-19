@@ -55,7 +55,7 @@ describe("Plan section", () => {
   it("rejects invalid context", async () => {
     const { deps } = setup();
     for (const context of [{ hoursPerWeek: 0 }, { hoursPerWeek: "six" }, { timeline: "x".repeat(101) }]) {
-      const res = await handleApi(post("/api/analyse", { resume: RESUME, jobDescription: JOB, context }), deps);
+      const res = await handleApi(post("/api/analyse", { resume: RESUME, jobDescription: JOB, context, consent: true }), deps);
       expect(res.status).toBe(400);
     }
   });

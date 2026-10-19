@@ -20,7 +20,7 @@ describe("demo mode", () => {
     globalThis.fetch = (() => Promise.reject(new Error("network used"))) as typeof fetch;
     try {
       const res = await worker.fetch(
-        new Request("https://coach.test/api/analyse", { method: "POST", body: JSON.stringify({ resume: "Demo resume", jobDescription: "Demo job" }) }),
+        new Request("https://coach.test/api/analyse", { method: "POST", body: JSON.stringify({ resume: "Demo resume", jobDescription: "Demo job", consent: true }) }),
         env,
       );
       const lines = (await res.text()).trim().split("\n").map((l) => JSON.parse(l));

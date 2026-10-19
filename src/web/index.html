@@ -17,7 +17,7 @@
         <h1>Land the DevOps role you actually want</h1>
         <p class="lede">Compare your Resume with a Job Description and get an honest Fit Band, the Gaps that matter, and a plan to close them.</p>
         <p class="promise">This site never stores your Resume or results. Everything disappears when you close the tab.</p>
-        <p class="muted">Files are read on your device. Only the text, which you can check and edit, is sent for analysis.</p>
+        <p class="muted">Files are read on your device. Only the text, which you can check and edit, is sent for analysis. <a href="/privacy" target="_blank" rel="noopener">How we handle your data</a>.</p>
       </section>
 
       <form id="analysis-form" class="card" novalidate>
@@ -65,6 +65,11 @@
             </div>
           </div>
         </fieldset>
+        <div class="consent">
+          <input id="consent" type="checkbox" required aria-describedby="consent-help" />
+          <label for="consent">I understand my text will be sent to Google Gemini for analysis.</label>
+          <p id="consent-help" class="muted">Google doesn't train on it but keeps it for up to 55 days for abuse monitoring, and may process it outside the UK and EU. This site keeps nothing. <a href="/privacy" target="_blank" rel="noopener">Privacy notice</a>.</p>
+        </div>
         <p id="form-error" class="error" role="alert" hidden></p>
         <button id="analyse" type="submit" class="primary">Analyse</button>
         <p id="analyses-left" class="muted" hidden></p>

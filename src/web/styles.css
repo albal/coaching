@@ -153,3 +153,10 @@ a { color: var(--accent); }
 .chat-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin-top: 8px; }
 .chat-row p { margin: 0; }
 label.inline { display: inline-flex; align-items: center; gap: 6px; font-weight: 400; margin: 0; }
+.consent { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; align-items: start; margin: 0 0 16px; }
+.consent input { margin-top: 5px; width: 18px; height: 18px; }
+.consent label { margin: 0; }
+.consent p { grid-column: 2; margin: 0; font-size: 0.9rem; }
+.prose { max-width: 720px; }
+.prose h2 { margin-top: 28px; }
+.brand a { color: inherit; text-decoration: none; }

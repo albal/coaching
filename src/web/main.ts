@@ -218,7 +218,7 @@ async function run(jobDescription: string) {
   activeTab = "fit";
   render();
   let finished = false;
-  await streamAnalysis({ resume: session.resume!, jobDescription, context }, (e: AnalysisEvent) => {
+  await streamAnalysis({ resume: session.resume!, jobDescription, context, consent: true }, (e: AnalysisEvent) => {
     if (!getAnalysis(session, id)) return; // the Session ended mid-stream
     if (e.type === "section") session = recordSection(session, id, e.section, e.data);
     else if (e.type === "done") (session = completeAnalysis(session, id)), (finished = true);
@@ -309,6 +309,11 @@ form.addEventListener("submit", (ev) => {
   const jobDescription = jdInput.value;
   if (!resume.trim() || !jobDescription.trim()) {
     showFormError("Please paste both your Resume and the Job Description.");
+    return;
+  }
+  if (!$<HTMLInputElement>("consent").checked) {
+    showFormError("Please tick the box to confirm you understand your text will be sent to Google Gemini.");
+    $("consent").focus();
     return;
   }
   if (session.resume === null) {

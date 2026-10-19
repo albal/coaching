@@ -228,4 +228,4 @@ export type AnalysisEvent =
   | { type: "error"; code: ErrorCode; message: string }
   | { type: "done" };
 
-export type ErrorCode = "bad_request" | "model_invalid" | "upstream";
+export type ErrorCode = "bad_request" | "consent_required" | "model_invalid" | "upstream";

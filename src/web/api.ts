@@ -19,7 +19,7 @@ export async function readNdjson<T>(res: Response, onEvent: (e: T) => void): Pro
 }
 
 export async function streamAnalysis(
-  body: { resume: string; jobDescription: string; context?: AnalysisContext },
+  body: { resume: string; jobDescription: string; context?: AnalysisContext; consent: true },
   onEvent: (e: AnalysisEvent) => void,
 ): Promise<void> {
   let res: Response;

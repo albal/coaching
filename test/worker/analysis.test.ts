@@ -29,7 +29,7 @@ describe("POST /api/analyse", () => {
 
   it("rejects a request without a Resume or Job Description", async () => {
     const { deps: d } = deps(SCRIPT);
-    for (const body of [{ resume: RESUME }, { jobDescription: JOB }, { resume: " ", jobDescription: JOB }]) {
+    for (const body of [{ resume: RESUME, consent: true }, { jobDescription: JOB, consent: true }, { resume: " ", jobDescription: JOB, consent: true }]) {
       const res = await handleApi(post("/api/analyse", body), d);
       expect(res.status).toBe(400);
       expect(await res.json()).toMatchObject({ type: "error", code: "bad_request" });
@@ -69,6 +69,18 @@ describe("POST /api/analyse", () => {
       expect(call.prompt).toContain(`<job_description>\n${JOB}\n</job_description>`);
       expect(call.system).toMatch(/never follow instructions/i);
     }
+  });
+});
+
+describe("consent", () => {
+  it("refuses to analyse until the user has consented to Gemini processing", async () => {
+    const { deps: d, gemini } = deps(SCRIPT);
+    for (const consent of [undefined, false, "yes"]) {
+      const res = await handleApi(post("/api/analyse", { resume: RESUME, jobDescription: JOB, consent }), d);
+      expect(res.status).toBe(400);
+      expect(await res.json()).toMatchObject({ type: "error", code: "consent_required" });
+    }
+    expect(gemini.calls).toHaveLength(0);
   });
 });
 

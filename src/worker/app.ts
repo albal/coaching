@@ -43,6 +43,9 @@ async function analyse(req: Request, deps: Deps): Promise<Response> {
   if (!isText(resume) || !isText(jobDescription)) {
     return badRequest("A Resume and a Job Description are required.");
   }
+  if (body.consent !== true) {
+    return badRequest("Please confirm you understand your text will be sent to Google Gemini.", "consent_required");
+  }
   const context = contextSchema.optional().safeParse(body.context);
   if (!context.success) {
     return badRequest("The optional context isn't valid.");

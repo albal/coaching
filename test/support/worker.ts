@@ -16,7 +16,8 @@ export async function events(res: Response): Promise<AnalysisEvent[]> {
   return out;
 }
 
-export async function analyse(deps: Deps, body: unknown) {
-  const res = await handleApi(post("/api/analyse", body), deps);
+// Posts an Analysis request; consent is given unless the body says otherwise.
+export async function analyse(deps: Deps, body: Record<string, unknown>) {
+  const res = await handleApi(post("/api/analyse", { consent: true, ...body }), deps);
   return { res, events: await events(res) };
 }
