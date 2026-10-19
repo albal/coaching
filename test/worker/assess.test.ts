@@ -3,11 +3,11 @@ import { describe, expect, it } from "vitest";
 import { constrainFitBand, type Requirement } from "../../src/shared/report";
 import { COACH_SYSTEM } from "../../src/worker/prompts";
 import { captureLogger, fakeGemini } from "../support/fake-gemini";
-import { ASSESS, EXTRACT, JOB, RESUME } from "../support/fixtures";
+import { ASSESS, EXTRACT, JOB, PLAN, RESUME, SCRIPT } from "../support/fixtures";
 import { analyse } from "../support/worker";
 
 function run(assess: unknown) {
-  const gemini = fakeGemini({ extract: EXTRACT, assess });
+  const gemini = fakeGemini({ ...SCRIPT, assess });
   return { gemini, result: analyse({ gemini: gemini.client, log: captureLogger().logger }, { resume: RESUME, jobDescription: JOB }) };
 }
 
@@ -23,7 +23,7 @@ const req = (mustHave: boolean, evidence: Requirement["evidence"]): Requirement 
 describe("Assess section", () => {
   it("streams the requirements map, seniority, hidden strengths and red flags after extract", async () => {
     const { events } = await run(ASSESS).result;
-    expect(events.map((e) => (e.type === "section" ? e.section : e.type))).toEqual(["extract", "assess", "done"]);
+    expect(events.map((e) => (e.type === "section" ? e.section : e.type)).slice(0, 2)).toEqual(["extract", "assess"]);
     expect(events[1]).toEqual({ type: "section", section: "assess", data: ASSESS });
   });
 

@@ -27,6 +27,23 @@
           <label for="job-description">Job Description</label>
           <textarea id="job-description" name="jobDescription" rows="12" placeholder="Paste the Job Description here" required></textarea>
         </div>
+        <fieldset class="context">
+          <legend>Optional: help the coach fit the plan to you</legend>
+          <div class="context-grid">
+            <div class="field">
+              <label for="ctx-seniority">Target seniority</label>
+              <input id="ctx-seniority" type="text" maxlength="100" placeholder="e.g. Senior" />
+            </div>
+            <div class="field">
+              <label for="ctx-hours">Hours per week for study</label>
+              <input id="ctx-hours" type="number" min="1" max="80" inputmode="numeric" placeholder="e.g. 6" />
+            </div>
+            <div class="field">
+              <label for="ctx-timeline">Target timeline</label>
+              <input id="ctx-timeline" type="text" maxlength="100" placeholder="e.g. interview in 3 weeks" />
+            </div>
+          </div>
+        </fieldset>
         <p id="form-error" class="error" role="alert" hidden></p>
         <button id="analyse" type="submit" class="primary">Analyse</button>
       </form>

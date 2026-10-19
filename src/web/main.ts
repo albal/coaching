@@ -1,4 +1,4 @@
-import type { AnalysisEvent } from "../shared/report";
+import type { AnalysisContext, AnalysisEvent } from "../shared/report";
 import { streamAnalysis } from "./api";
 import { h } from "./dom";
 import { tabsFor } from "./render";
@@ -38,7 +38,13 @@ function render(id: string) {
   reportEl.hidden = false;
   renderTabs(analysis);
   statusEl.textContent =
-    analysis.status === "running" ? (analysis.report.extract ? "Assessing your fit…" : "Reading your Resume and the Job Description…") : "";
+    analysis.status !== "running"
+      ? ""
+      : !analysis.report.extract
+        ? "Reading your Resume and the Job Description…"
+        : !analysis.report.assess
+          ? "Assessing your fit…"
+          : "Building your plan…";
   $("report-error").hidden = analysis.status !== "failed";
   $("report-error-text").textContent = analysis.error ?? "";
   analyseButton.disabled = analysis.status === "running";
@@ -74,9 +80,21 @@ function renderTabs(analysis: Analysis) {
   panel.replaceChildren(active ? active.render() : "");
 }
 
+function readContext(): AnalysisContext {
+  const seniority = $<HTMLInputElement>("ctx-seniority").value.trim();
+  const hours = Number.parseInt($<HTMLInputElement>("ctx-hours").value, 10);
+  const timeline = $<HTMLInputElement>("ctx-timeline").value.trim();
+  return {
+    ...(seniority && { seniority }),
+    ...(hours >= 1 && hours <= 80 && { hoursPerWeek: hours }),
+    ...(timeline && { timeline }),
+  };
+}
+
 async function run(jobDescription: string) {
   const id = crypto.randomUUID();
-  const added = addAnalysis(session, id, jobDescription);
+  const context = readContext();
+  const added = addAnalysis(session, id, jobDescription, context);
   if (!added.ok) {
     showFormError(added.reason === "limit" ? "You've reached the limit of Analyses for this Session." : "Please add a Job Description.");
     return;
@@ -84,7 +102,7 @@ async function run(jobDescription: string) {
   session = added.session;
   render(id);
   let finished = false;
-  await streamAnalysis({ resume: session.resume!, jobDescription }, (e: AnalysisEvent) => {
+  await streamAnalysis({ resume: session.resume!, jobDescription, context }, (e: AnalysisEvent) => {
     if (e.type === "section") session = recordSection(session, id, e.section, e.data);
     else if (e.type === "done") (session = completeAnalysis(session, id)), (finished = true);
     else if (e.type === "error") (session = failAnalysis(session, id, e.message)), (finished = true);

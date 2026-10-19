@@ -98,10 +98,59 @@ export function constrainFitBand(band: FitBand, requirements: Requirement[]): Fi
   return band === "strong_fit" ? "stretch" : band;
 }
 
+const LEVELS = ["low", "medium", "high"] as const;
+
+export const planSchema = z.object({
+  // Ranked: index 0 is the Gap to work on first.
+  gaps: z.array(
+    z.object({
+      requirement: z.string(),
+      mustHave: z.boolean(),
+      impact: z.enum(LEVELS),
+      effort: z.enum(LEVELS),
+      whatToLearn: z.string(),
+      timeEstimate: z.string(),
+      resourceType: z.string(),
+      // Empty unless a certification genuinely helps for this Job Description.
+      certification: z.string(),
+    }),
+  ),
+  projects: z.array(
+    z.object({
+      title: z.string(),
+      description: z.string(),
+      provesGaps: z.array(z.string()),
+    }),
+  ),
+  // Empty unless the candidate gave hours per week or a timeline.
+  weeklyPlan: z.array(
+    z.object({
+      week: z.number().int().min(1),
+      focus: z.string(),
+      tasks: z.array(z.string()),
+    }),
+  ),
+  recommendation: z.object({
+    decision: z.enum(["apply_now", "prepare_first"]),
+    reason: z.string(),
+  }),
+});
+
 export const sectionSchemas = {
   extract: extractSchema,
   assess: assessSchema,
+  plan: planSchema,
 } as const;
+
+// Steps that run in parallel once Assess is done.
+export const AFTER_ASSESS = ["plan"] as const satisfies readonly SectionName[];
+
+export const contextSchema = z.object({
+  seniority: z.string().trim().max(100).optional(),
+  hoursPerWeek: z.number().int().min(1).max(80).optional(),
+  timeline: z.string().trim().max(100).optional(),
+});
+export type AnalysisContext = z.infer<typeof contextSchema>;
 
 export type SectionName = keyof typeof sectionSchemas;
 export type Sections = { [K in SectionName]: z.infer<(typeof sectionSchemas)[K]> };

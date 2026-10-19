@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { constrainFitBand, sectionSchemas, type AnalysisEvent, type SectionName } from "../shared/report";
+import { AFTER_ASSESS, constrainFitBand, sectionSchemas, type AnalysisEvent, type SectionName } from "../shared/report";
 import { UpstreamError, type GeminiClient } from "./gemini";
 import type { Logger } from "./log";
-import { COACH_SYSTEM, assessPrompt, extractPrompt, type AnalysisInput } from "./prompts";
+import { COACH_SYSTEM, assessPrompt, extractPrompt, planPrompt, type AnalysisInput } from "./prompts";
 
 export class PipelineError extends Error {
   constructor(readonly code: "model_invalid" | "upstream") {
@@ -57,4 +57,19 @@ export async function runAnalysis(
   const assessed = await runStep(gemini, log, "assess", assessPrompt(input, extract));
   const assess = { ...assessed, fitBand: constrainFitBand(assessed.fitBand, assessed.requirements) };
   emit({ type: "section", section: "assess", data: assess });
+
+  // Later steps run in parallel; each section streams as soon as it's ready.
+  // If any fails, the others still arrive before the error is raised.
+  const report = { extract, assess };
+  const prompts: Record<(typeof AFTER_ASSESS)[number], string> = {
+    plan: planPrompt(input, report),
+  };
+  const results = await Promise.allSettled(
+    AFTER_ASSESS.map(async (section) => {
+      const data = await runStep(gemini, log, section, prompts[section]);
+      emit({ type: "section", section, data });
+    }),
+  );
+  const failure = results.find((r): r is PromiseRejectedResult => r.status === "rejected");
+  if (failure) throw failure.reason;
 }

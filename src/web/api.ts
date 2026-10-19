@@ -1,4 +1,4 @@
-import type { AnalysisEvent } from "../shared/report";
+import type { AnalysisContext, AnalysisEvent } from "../shared/report";
 
 // Reads a newline-delimited JSON stream, calling onEvent for each line.
 export async function readNdjson<T>(res: Response, onEvent: (e: T) => void): Promise<void> {
@@ -18,7 +18,7 @@ export async function readNdjson<T>(res: Response, onEvent: (e: T) => void): Pro
 }
 
 export async function streamAnalysis(
-  body: { resume: string; jobDescription: string },
+  body: { resume: string; jobDescription: string; context?: AnalysisContext },
   onEvent: (e: AnalysisEvent) => void,
 ): Promise<void> {
   let res: Response;

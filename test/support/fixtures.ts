@@ -36,3 +36,16 @@ export const ASSESS: Sections["assess"] = {
   hiddenStrengths: ["Deploy-time reduction is a strong CI/CD story"],
   redFlags: ["Skills list has no outcomes"],
 };
+
+export const PLAN: Sections["plan"] = {
+  gaps: [
+    { requirement: "GitHub Actions", mustHave: true, impact: "high", effort: "low", whatToLearn: "Port a GitLab pipeline to Actions", timeEstimate: "1 week", resourceType: "Official docs and a hands-on repo", certification: "" },
+    { requirement: "ArgoCD", mustHave: false, impact: "medium", effort: "medium", whatToLearn: "GitOps with ArgoCD", timeEstimate: "2 weeks", resourceType: "Official getting-started guide", certification: "" },
+  ],
+  projects: [{ title: "GitOps on EKS", description: "Deploy a 3-tier app with Terraform, ArgoCD and Actions", provesGaps: ["GitHub Actions", "ArgoCD"] }],
+  weeklyPlan: [{ week: 1, focus: "GitHub Actions", tasks: ["Port the pipeline"] }],
+  recommendation: { decision: "apply_now", reason: "Only one small Must-have Gap." },
+};
+
+// A reply for every section; override per test.
+export const SCRIPT = { extract: EXTRACT, assess: ASSESS, plan: PLAN };

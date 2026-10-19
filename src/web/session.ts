@@ -1,4 +1,4 @@
-import type { Report, SectionName } from "../shared/report";
+import type { AnalysisContext, Report, SectionName } from "../shared/report";
 
 // The browser Session model: the only store of user content (ADR-0001).
 // Pure functions over immutable state; no DOM, no storage.
@@ -10,6 +10,7 @@ export type AnalysisStatus = "running" | "complete" | "failed";
 export interface Analysis {
   id: string;
   jobDescription: string;
+  context: AnalysisContext;
   report: Report;
   status: AnalysisStatus;
   error?: string;
@@ -41,11 +42,11 @@ export function canAddAnalysis(s: Session): boolean {
   return s.resume !== null && liveAnalyses(s).length < MAX_ANALYSES;
 }
 
-export function addAnalysis(s: Session, id: string, jobDescription: string): Result {
+export function addAnalysis(s: Session, id: string, jobDescription: string, context: AnalysisContext = {}): Result {
   if (s.resume === null) return { ok: false, reason: "no_resume" };
   if (!jobDescription.trim()) return { ok: false, reason: "empty" };
   if (!canAddAnalysis(s)) return { ok: false, reason: "limit" };
-  const analysis: Analysis = { id, jobDescription, report: {}, status: "running", downloaded: false };
+  const analysis: Analysis = { id, jobDescription, context, report: {}, status: "running", downloaded: false };
   // A failed Analysis is replaced, not kept alongside its retry.
   return { ok: true, session: { ...s, analyses: [...liveAnalyses(s), analysis] } };
 }

@@ -1,4 +1,4 @@
-import type { AnalysisEvent } from "../shared/report";
+import { contextSchema, type AnalysisEvent } from "../shared/report";
 import type { GeminiClient } from "./gemini";
 import { json, ndjsonStream } from "./http";
 import type { Logger } from "./log";
@@ -29,11 +29,15 @@ async function analyse(req: Request, deps: Deps): Promise<Response> {
   if (!isText(resume) || !isText(jobDescription)) {
     return json({ type: "error", code: "bad_request", message: "A Resume and a Job Description are required." }, 400);
   }
+  const context = contextSchema.optional().safeParse(body.context);
+  if (!context.success) {
+    return json({ type: "error", code: "bad_request", message: "The optional context isn't valid." }, 400);
+  }
 
   deps.log.event({ event: "analysis_started" });
   return ndjsonStream(async (emit: (e: AnalysisEvent) => void) => {
     try {
-      await runAnalysis(deps.gemini, deps.log, { resume, jobDescription }, emit);
+      await runAnalysis(deps.gemini, deps.log, { resume, jobDescription, context: context.data }, emit);
       emit({ type: "done" });
       deps.log.event({ event: "analysis_completed" });
     } catch (err) {

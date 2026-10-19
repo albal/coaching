@@ -66,12 +66,67 @@ function gapsTab(assess: Sections["assess"]): HTMLElement {
   );
 }
 
+const LEVEL_LABELS = { low: "Low", medium: "Medium", high: "High" } as const;
+
+function planTab(plan: Sections["plan"]): HTMLElement {
+  const rec = plan.recommendation;
+  return h(
+    "div",
+    null,
+    h(
+      "div",
+      { class: `callout callout-${rec.decision}` },
+      h("strong", null, rec.decision === "apply_now" ? "Apply now. " : "Prepare first. "),
+      rec.reason,
+    ),
+    h("h3", null, "Close these Gaps, in this order"),
+    plan.gaps.length
+      ? h(
+          "ol",
+          { class: "plan-gaps" },
+          plan.gaps.map((g) =>
+            h(
+              "li",
+              null,
+              h("p", { class: "req-head" }, h("strong", null, g.requirement), " ", h("span", { class: "badge" }, g.mustHave ? "Must-have" : "Nice-to-have")),
+              h("p", { class: "muted" }, `Impact on getting hired: ${LEVEL_LABELS[g.impact]} · Effort: ${LEVEL_LABELS[g.effort]} · About ${g.timeEstimate}`),
+              h("p", null, g.whatToLearn),
+              h("p", null, h("em", null, "Resources: "), g.resourceType),
+              g.certification ? h("p", null, h("em", null, "Certification: "), g.certification) : null,
+            ),
+          ),
+        )
+      : h("p", null, "No Gaps to close."),
+    h("h3", null, "Portfolio projects"),
+    plan.projects.length
+      ? h(
+          "ul",
+          null,
+          plan.projects.map((p) =>
+            h("li", null, h("strong", null, p.title), h("p", null, p.description), p.provesGaps.length ? h("p", { class: "muted" }, `Proves: ${p.provesGaps.join(", ")}`) : null),
+          ),
+        )
+      : h("p", { class: "muted" }, "No projects suggested."),
+    plan.weeklyPlan.length
+      ? [
+          h("h3", null, "Week by week"),
+          h(
+            "ol",
+            { class: "weeks" },
+            plan.weeklyPlan.map((w) => h("li", null, h("strong", null, `Week ${w.week}: ${w.focus}`), list(w.tasks, ""))),
+          ),
+        ]
+      : null,
+  );
+}
+
 export function tabsFor(analysis: Analysis): Tab[] {
   const tabs: Tab[] = [];
-  const { assess } = analysis.report;
+  const { assess, plan } = analysis.report;
   if (assess) {
     tabs.push({ id: "fit", label: "Fit", render: () => fitTab(assess) });
     tabs.push({ id: "gaps", label: "Gaps", render: () => gapsTab(assess) });
   }
+  if (plan) tabs.push({ id: "plan", label: "Plan", render: () => planTab(plan) });
   return tabs;
 }
