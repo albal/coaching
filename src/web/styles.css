@@ -102,3 +102,5 @@ legend { font-weight: 600; padding: 0 4px; }
 .rewrites > li { margin-bottom: 16px; }
 .rewrites p { margin: 4px 0; }
 .label { font-weight: 600; }
+.questions > li { margin-bottom: 14px; }
+.questions p { margin: 4px 0; }

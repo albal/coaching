@@ -59,5 +59,15 @@ export const REWRITES: Sections["rewrites"] = {
   summary: "DevOps engineer who runs Kubernetes at scale and speeds up delivery.",
 };
 
+const TYPES = ["technical", "scenario", "system_design", "behavioural"] as const;
+export const INTERVIEW: Sections["interview"] = {
+  questions: Array.from({ length: 12 }, (_, n) => ({
+    type: TYPES[n % 4]!,
+    question: `Question ${n + 1}`,
+    testing: "Depth with Kubernetes",
+    resumeStories: ["Ran Helm charts on EKS for 40 services."],
+  })),
+};
+
 // A reply for every section; override per test.
-export const SCRIPT = { extract: EXTRACT, assess: ASSESS, plan: PLAN, rewrites: REWRITES };
+export const SCRIPT = { extract: EXTRACT, assess: ASSESS, plan: PLAN, rewrites: REWRITES, interview: INTERVIEW };

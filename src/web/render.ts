@@ -1,4 +1,4 @@
-import { DEVOPS_AREAS, FIT_BAND_LABELS, gapsOf, type Requirement, type Sections } from "../shared/report";
+import { DEVOPS_AREAS, FIT_BAND_LABELS, QUESTION_TYPE_LABELS, QUESTION_TYPES, gapsOf, type Requirement, type Sections } from "../shared/report";
 import { h, list } from "./dom";
 import type { Analysis } from "./session";
 
@@ -150,14 +150,46 @@ function rewritesTab(r: Sections["rewrites"]): HTMLElement {
   );
 }
 
+function interviewTab(i: Sections["interview"]): HTMLElement {
+  return h(
+    "div",
+    null,
+    QUESTION_TYPES.map((type) => {
+      const qs = i.questions.filter((q) => q.type === type);
+      if (!qs.length) return null;
+      return h(
+        "section",
+        null,
+        h("h3", null, QUESTION_TYPE_LABELS[type]),
+        h(
+          "ol",
+          { class: "questions" },
+          qs.map((q) =>
+            h(
+              "li",
+              null,
+              h("p", null, h("strong", null, q.question)),
+              h("p", null, h("span", { class: "label" }, "What they're testing: "), q.testing),
+              q.resumeStories.length
+                ? h("div", null, h("p", { class: "label" }, "Stories from your Resume:"), list(q.resumeStories, ""))
+                : null,
+            ),
+          ),
+        ),
+      );
+    }),
+  );
+}
+
 export function tabsFor(analysis: Analysis): Tab[] {
   const tabs: Tab[] = [];
-  const { assess, plan, rewrites } = analysis.report;
+  const { assess, plan, rewrites, interview } = analysis.report;
   if (assess) {
     tabs.push({ id: "fit", label: "Fit", render: () => fitTab(assess) });
     tabs.push({ id: "gaps", label: "Gaps", render: () => gapsTab(assess) });
   }
   if (plan) tabs.push({ id: "plan", label: "Plan", render: () => planTab(plan) });
   if (rewrites) tabs.push({ id: "resume", label: "Resume", render: () => rewritesTab(rewrites) });
+  if (interview) tabs.push({ id: "interview", label: "Interview", render: () => interviewTab(interview) });
   return tabs;
 }

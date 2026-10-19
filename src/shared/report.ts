@@ -173,15 +173,42 @@ export const rewritesSchema = z
     message: "Placeholders must appear in the rewrite",
   });
 
+export const QUESTION_TYPES = ["technical", "scenario", "system_design", "behavioural"] as const;
+export type QuestionType = (typeof QUESTION_TYPES)[number];
+
+export const QUESTION_TYPE_LABELS: Record<QuestionType, string> = {
+  technical: "Technical",
+  scenario: "Scenario",
+  system_design: "System design",
+  behavioural: "Behavioural",
+};
+
+export const interviewSchema = z.object({
+  questions: z
+    .array(
+      z.object({
+        type: z.enum(QUESTION_TYPES),
+        question: z.string(),
+        // What the interviewer is testing with this question.
+        testing: z.string(),
+        // Experience from the candidate's own Resume to use in the answer.
+        resumeStories: z.array(z.string()),
+      }),
+    )
+    .min(10)
+    .max(20),
+});
+
 export const sectionSchemas = {
   extract: extractSchema,
   assess: assessSchema,
   plan: planSchema,
   rewrites: rewritesSchema,
+  interview: interviewSchema,
 } as const;
 
 // Steps that run in parallel once Assess is done.
-export const AFTER_ASSESS = ["plan", "rewrites"] as const satisfies readonly SectionName[];
+export const AFTER_ASSESS = ["plan", "rewrites", "interview"] as const satisfies readonly SectionName[];
 
 export const contextSchema = z.object({
   seniority: z.string().trim().max(100).optional(),

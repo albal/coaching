@@ -105,3 +105,13 @@ export function rewritesPrompt(input: AnalysisInput, report: unknown): string {
 
 ${common(input, report)}`;
 }
+
+export function interviewPrompt(input: AnalysisInput, report: unknown): string {
+  return `Prepare this candidate for the interview for this role.
+
+- Give 10 to 20 likely interview questions covering all four types: technical, scenario (for example "production is down, walk me through it"), system design (for example "design a CI/CD platform for 200 microservices") and behavioural.
+- Focus on the Job Description's must-haves and the candidate's Gaps.
+- For each question, say what the interviewer is testing, and point to the specific experience from the candidate's own Resume they should use in their answer. If the Resume has nothing relevant, say so and suggest how to answer honestly.
+
+${common(input, report)}`;
+}

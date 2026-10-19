@@ -2,7 +2,7 @@ import { z } from "zod";
 import { AFTER_ASSESS, constrainFitBand, sectionSchemas, type AnalysisEvent, type SectionName } from "../shared/report";
 import { UpstreamError, type GeminiClient } from "./gemini";
 import type { Logger } from "./log";
-import { COACH_SYSTEM, assessPrompt, extractPrompt, planPrompt, rewritesPrompt, type AnalysisInput } from "./prompts";
+import { COACH_SYSTEM, assessPrompt, extractPrompt, interviewPrompt, planPrompt, rewritesPrompt, type AnalysisInput } from "./prompts";
 
 const normalise = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
 
@@ -75,6 +75,7 @@ export async function runAnalysis(
   const prompts: Record<(typeof AFTER_ASSESS)[number], string> = {
     plan: planPrompt(input, report),
     rewrites: rewritesPrompt(input, report),
+    interview: interviewPrompt(input, report),
   };
   const checks: { [S in (typeof AFTER_ASSESS)[number]]?: (data: Data<S>) => boolean } = {
     rewrites: (data) => data.bullets.every((b) => quotes(input.resume, b.original)),
