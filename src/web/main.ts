@@ -1,5 +1,6 @@
 import type { AnalysisContext, AnalysisEvent } from "../shared/report";
 import { streamAnalysis } from "./api";
+import { EXTRACT_MESSAGES, extractText } from "./extract";
 import { h } from "./dom";
 import { tabsFor } from "./render";
 import {
@@ -133,3 +134,32 @@ form.addEventListener("submit", (ev) => {
 });
 
 $("retry").addEventListener("click", () => void run(jdInput.value));
+
+function wireUpload(inputId: string, target: HTMLTextAreaElement, statusId: string, noun: string) {
+  const input = $<HTMLInputElement>(inputId);
+  const status = $(statusId);
+  input.addEventListener("change", async () => {
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    if (target.readOnly) {
+      status.textContent = "Your Resume is fixed for this Session.";
+      return;
+    }
+    status.textContent = `Reading ${file.name}…`;
+    status.classList.remove("error");
+    const result = await extractText(file);
+    if (result.ok) {
+      target.value = result.text;
+      status.textContent = `Read ${file.name}. Check the text above and fix anything that came out wrong.`;
+      target.focus();
+    } else {
+      const message = EXTRACT_MESSAGES[result.reason];
+      status.textContent = noun === "Resume" ? message : message.replace("your Resume", "the Job Description");
+      status.classList.add("error");
+    }
+  });
+}
+
+wireUpload("resume-file", resumeInput, "resume-file-status", "Resume");
+wireUpload("jd-file", jdInput, "jd-file-status", "Job Description");

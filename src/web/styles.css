@@ -48,7 +48,7 @@ body {
 }
 .field { margin-bottom: 16px; }
 label { display: block; font-weight: 600; margin-bottom: 6px; }
-textarea, input[type="text"], select {
+textarea, input[type="text"], input[type="number"], select {
   width: 100%;
   font: inherit;
   color: inherit;
@@ -104,3 +104,18 @@ legend { font-weight: 600; padding: 0 4px; }
 .label { font-weight: 600; }
 .questions > li { margin-bottom: 14px; }
 .questions p { margin: 4px 0; }
+.upload { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin-top: 8px; }
+.upload p { margin: 0; }
+label.button {
+  display: inline-block;
+  font-weight: 500;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  background: var(--surface);
+}
+.visually-hidden:focus-visible + p, .visually-hidden:focus + p { outline: none; }
+.upload:focus-within label.button { outline: 3px solid var(--accent); outline-offset: 2px; }
+.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }

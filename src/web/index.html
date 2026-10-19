@@ -16,16 +16,27 @@
         <h1>Land the DevOps role you actually want</h1>
         <p class="lede">Compare your Resume with a Job Description and get an honest Fit Band, the Gaps that matter, and a plan to close them.</p>
         <p class="promise">This site never stores your Resume or results. Everything disappears when you close the tab.</p>
+        <p class="muted">Files are read on your device. Only the text, which you can check and edit, is sent for analysis.</p>
       </section>
 
       <form id="analysis-form" class="card" novalidate>
         <div class="field">
           <label for="resume">Your Resume</label>
-          <textarea id="resume" name="resume" rows="12" placeholder="Paste your Resume text here" required></textarea>
+          <textarea id="resume" name="resume" rows="12" placeholder="Paste your Resume text here, or upload a file" required></textarea>
+          <div class="upload">
+            <label class="button" for="resume-file">Upload Resume (PDF, DOCX, TXT, MD)</label>
+            <input id="resume-file" class="visually-hidden" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" />
+            <p id="resume-file-status" class="muted" role="status"></p>
+          </div>
         </div>
         <div class="field">
           <label for="job-description">Job Description</label>
-          <textarea id="job-description" name="jobDescription" rows="12" placeholder="Paste the Job Description here" required></textarea>
+          <textarea id="job-description" name="jobDescription" rows="12" placeholder="Paste the Job Description here, or upload a file" required></textarea>
+          <div class="upload">
+            <label class="button" for="jd-file">Upload Job Description (PDF, DOCX, TXT)</label>
+            <input id="jd-file" class="visually-hidden" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" />
+            <p id="jd-file-status" class="muted" role="status"></p>
+          </div>
         </div>
         <fieldset class="context">
           <legend>Optional: help the coach fit the plan to you</legend>
