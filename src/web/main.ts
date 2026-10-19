@@ -278,7 +278,8 @@ function saveFile(name: string, markdown: string) {
   document.body.append(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 0);
+  // Revoking at once can cancel the download in some browsers.
+  setTimeout(() => URL.revokeObjectURL(url), 30_000);
 }
 
 const includeChat = () => $<HTMLInputElement>("include-chat").checked;
@@ -408,7 +409,9 @@ $("restart").addEventListener("click", () => {
 
 // Warn before a refresh or close would lose Reports that haven't been saved.
 window.addEventListener("beforeunload", (ev) => {
-  if (hasUndownloadedReports(session)) ev.preventDefault();
+  if (!hasUndownloadedReports(session)) return;
+  ev.preventDefault();
+  ev.returnValue = ""; // older browsers need this to show the prompt
 });
 
 function wireUpload(inputId: string, target: HTMLTextAreaElement, statusId: string, noun: string) {

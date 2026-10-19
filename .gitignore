@@ -4,3 +4,4 @@ dist/
 .dev.vars
 test-results/
 playwright-report/
+.wrangler/e2e-state/
