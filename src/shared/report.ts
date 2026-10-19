@@ -27,6 +27,8 @@ export const extractSchema = z.object({
   job: z.object({
     title: z.string(),
     seniority: z.string(),
+    // DevOps or adjacent (SRE, Platform, Cloud, DevSecOps, MLOps, Infrastructure).
+    isDevOpsRelated: z.boolean(),
     requirements: z.array(
       z.object({
         text: z.string(),

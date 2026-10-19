@@ -107,3 +107,14 @@ describe("GET /api/config", () => {
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
 });
+
+describe("off-domain Job Descriptions", () => {
+  it("passes the isDevOpsRelated flag through and still runs the full Analysis", async () => {
+    const offDomain = { ...EXTRACT, job: { ...EXTRACT.job, title: "Staff Nurse", isDevOpsRelated: false } };
+    const { deps: d, gemini } = deps({ ...SCRIPT, extract: offDomain });
+    const { events } = await analyse(d, { resume: RESUME, jobDescription: "Staff Nurse, NHS ward" });
+    expect(events[0]).toMatchObject({ section: "extract", data: { job: { isDevOpsRelated: false } } });
+    expect(events.at(-1)).toEqual({ type: "done" });
+    expect(gemini.calls.find((c) => c.section === "extract")!.prompt).toMatch(/SRE, Platform, Cloud, DevSecOps, MLOps, Infrastructure/);
+  });
+});

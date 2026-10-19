@@ -138,3 +138,8 @@ a { color: var(--accent); }
   .req, li { break-inside: avoid; }
   a { color: #000; }
 }
+.analyses { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.analyses button[aria-current="true"] { border-color: var(--accent); font-weight: 600; }
+#analyses-left { margin: 8px 0 0; }
+#change-resume-panel { margin-top: 12px; }
+#change-resume-panel p { margin-top: 0; }

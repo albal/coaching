@@ -4,6 +4,7 @@ import { h } from "./dom";
 import { fileNameFor, reportToMarkdown, reportsOf, sessionToMarkdown, titleOf } from "./export";
 import { EXTRACT_MESSAGES, extractText } from "./extract";
 import { printView, tabsFor } from "./render";
+import { FIT_BAND_LABELS } from "../shared/report";
 import {
   addAnalysis,
   completeAnalysis,
@@ -11,7 +12,9 @@ import {
   endSession,
   failAnalysis,
   getAnalysis,
+  canAddAnalysis,
   hasUndownloadedReports,
+  MAX_ANALYSES,
   markDownloaded,
   recordSection,
   setResume,
@@ -45,11 +48,46 @@ function renderBooking() {
   for (const a of document.querySelectorAll<HTMLAnchorElement>("[data-booking-link]")) a.href = bookingUrl || "#";
 }
 
+function renderSwitcher() {
+  const nav = $("analyses");
+  const live = session.analyses.filter((a) => a.status !== "failed");
+  nav.hidden = live.length < 2;
+  nav.replaceChildren(
+    ...live.map((a, i) => {
+      const band = a.report.assess ? ` · ${FIT_BAND_LABELS[a.report.assess.fitBand]}` : "";
+      const label = `${i + 1}. ${a.report.extract ? titleOf(a) : "Analysing…"}${band}`;
+      const button = h("button", { type: "button", "aria-current": a.id === currentId ? "true" : "false" }, label);
+      button.addEventListener("click", () => {
+        currentId = a.id;
+        render();
+      });
+      return button;
+    }),
+  );
+}
+
+function renderForm() {
+  const hasResume = session.resume !== null;
+  const live = session.analyses.filter((a) => a.status !== "failed").length;
+  const running = session.analyses.some((a) => a.status === "running");
+  $("change-resume").hidden = !hasResume;
+  analyseButton.textContent = live > 0 ? "Analyse another Job Description" : "Analyse";
+  analyseButton.disabled = running || (hasResume && !canAddAnalysis(session));
+  const left = $("analyses-left");
+  left.hidden = !hasResume;
+  left.textContent = canAddAnalysis(session)
+    ? `You can analyse ${MAX_ANALYSES - live} more Job Description${MAX_ANALYSES - live === 1 ? "" : "s"} against this Resume.`
+    : `You've analysed ${MAX_ANALYSES} Job Descriptions, the most for one Session. Download your Reports, then change your Resume or end the Session to start again.`;
+}
+
 function render() {
   const analysis = currentId ? getAnalysis(session, currentId) : undefined;
   $("end-session").hidden = session.resume === null;
+  renderForm();
+  renderSwitcher();
   reportEl.hidden = !analysis;
   if (!analysis) return;
+  $("off-domain").hidden = analysis.report.extract?.job.isDevOpsRelated !== false;
   $("report-title").textContent = analysis.report.extract ? `Your Report: ${titleOf(analysis)}` : "Your Report";
   renderTabs(analysis);
   statusEl.textContent =
@@ -64,7 +102,6 @@ function render() {
   $("report-error-text").textContent = analysis.error ?? "";
   $("report-actions").hidden = analysis.status !== "complete";
   $("download-all").hidden = reportsOf(session).length < 2;
-  analyseButton.disabled = analysis.status === "running";
 }
 
 function renderTabs(analysis: Analysis) {
@@ -120,6 +157,7 @@ async function run(jobDescription: string) {
   }
   session = added.session;
   currentId = id;
+  activeTab = "fit";
   render();
   let finished = false;
   await streamAnalysis({ resume: session.resume!, jobDescription, context }, (e: AnalysisEvent) => {
@@ -180,6 +218,17 @@ function resetForm() {
   showFormError(null);
 }
 
+function changeResume(download: boolean) {
+  if (download) downloadAll();
+  session = endSession(session);
+  currentId = null;
+  resumeInput.readOnly = false;
+  $("change-resume-panel").hidden = true;
+  render();
+  resumeInput.focus();
+  resumeInput.select();
+}
+
 function end() {
   if (hasUndownloadedReports(session) && !confirm("You have Reports you haven't downloaded. End the Session and delete them?")) return;
   session = endSession(session);
@@ -205,6 +254,8 @@ form.addEventListener("submit", (ev) => {
     if (!set.ok) return showFormError("Please paste your Resume.");
     session = set.session;
     resumeInput.readOnly = true;
+  } else if (!canAddAnalysis(session)) {
+    return showFormError("You've reached the limit of Analyses for this Session.");
   }
   void run(jobDescription);
 });
@@ -214,6 +265,18 @@ $("download").addEventListener("click", downloadCurrent);
 $("download-all").addEventListener("click", downloadAll);
 $("print").addEventListener("click", printCurrent);
 $("end-session").addEventListener("click", end);
+$("change-resume").addEventListener("click", () => {
+  if (hasUndownloadedReports(session)) {
+    $("change-resume-panel").hidden = false;
+    $("change-download").focus();
+  } else changeResume(false);
+});
+$("change-download").addEventListener("click", () => changeResume(true));
+$("change-discard").addEventListener("click", () => changeResume(false));
+$("change-cancel").addEventListener("click", () => {
+  $("change-resume-panel").hidden = true;
+  $("change-resume").focus();
+});
 $("restart").addEventListener("click", () => {
   $("ended").hidden = true;
   $("app").hidden = false;

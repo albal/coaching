@@ -17,6 +17,7 @@ export const EXTRACT: Sections["extract"] = {
   job: {
     title: "Senior Platform Engineer",
     seniority: "Senior",
+    isDevOpsRelated: true,
     requirements: [
       { text: "Kubernetes in production", mustHave: true },
       { text: "ArgoCD", mustHave: false },

@@ -16,6 +16,7 @@ const REPLIES: Sections = {
     job: {
       title: "Senior Platform Engineer",
       seniority: "Senior",
+      isDevOpsRelated: true,
       requirements: [
         { text: "Kubernetes in production", mustHave: true },
         { text: "Terraform", mustHave: true },

@@ -3,7 +3,7 @@ import type { AnalysisContext, Report, SectionName } from "../shared/report";
 // The browser Session model: the only store of user content (ADR-0001).
 // Pure functions over immutable state; no DOM, no storage.
 
-export const MAX_ANALYSES = 1;
+export const MAX_ANALYSES = 3;
 
 export type AnalysisStatus = "running" | "complete" | "failed";
 
@@ -87,6 +87,8 @@ export function hasUndownloadedReports(s: Session): boolean {
 }
 
 // Ending a Session deletes everything: the result is a brand new Session.
+// Changing the Resume does the same, since it would make every Report stale
+// (the UI offers a download first).
 export function endSession(_s: Session): Session {
   return createSession();
 }

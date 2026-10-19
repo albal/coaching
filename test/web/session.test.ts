@@ -4,6 +4,7 @@ import {
   canAddAnalysis,
   completeAnalysis,
   createSession,
+  endSession,
   failAnalysis,
   getAnalysis,
   recordSection,
@@ -42,10 +43,36 @@ describe("Session model", () => {
 
   it("allows a retry to replace a failed Analysis", () => {
     let s = ok(addAnalysis(ok(setResume(createSession(), RESUME)), "a", JOB));
-    expect(canAddAnalysis(s)).toBe(false);
     s = failAnalysis(s, "a", "boom");
-    expect(canAddAnalysis(s)).toBe(true);
     s = ok(addAnalysis(s, "b", JOB));
     expect(s.analyses.map((a) => a.id)).toEqual(["b"]);
+  });
+});
+
+describe("multiple Analyses", () => {
+  const withResume = () => ok(setResume(createSession(), RESUME));
+
+  it("allows up to three Analyses against one Resume and refuses a fourth", () => {
+    let s = withResume();
+    for (const id of ["a", "b", "c"]) s = completeAnalysis(ok(addAnalysis(s, id, JOB)), id);
+    expect(s.analyses.map((a) => a.id)).toEqual(["a", "b", "c"]);
+    expect(canAddAnalysis(s)).toBe(false);
+    expect(addAnalysis(s, "d", JOB)).toEqual({ ok: false, reason: "limit" });
+  });
+
+  it("does not count failed Analyses towards the limit", () => {
+    let s = withResume();
+    s = ok(addAnalysis(s, "a", JOB));
+    s = ok(addAnalysis(s, "b", JOB));
+    s = failAnalysis(ok(addAnalysis(s, "c", JOB)), "c", "boom");
+    expect(canAddAnalysis(s)).toBe(true);
+  });
+
+  it("starts a new Session with no Analyses when the Resume is replaced", () => {
+    let s = completeAnalysis(ok(addAnalysis(withResume(), "a", JOB)), "a");
+    s = endSession(s);
+    expect(s.analyses).toEqual([]);
+    s = ok(setResume(s, "A different Resume"));
+    expect(s).toEqual({ resume: "A different Resume", analyses: [] });
   });
 });

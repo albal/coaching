@@ -63,7 +63,7 @@ ${common(input, report)}`;
 }
 
 export function extractPrompt(input: AnalysisInput): string {
-  return `Extract structured facts from the Resume and the Job Description. For each Job Description requirement, set mustHave to true when the advert presents it as essential and false when it is a nice-to-have.
+  return `Extract structured facts from the Resume and the Job Description. For each Job Description requirement, set mustHave to true when the advert presents it as essential and false when it is a nice-to-have. Set isDevOpsRelated to true for DevOps roles and adjacent ones (SRE, Platform, Cloud, DevSecOps, MLOps, Infrastructure), and false for anything else.
 
 ${asData("resume", input.resume)}
 
