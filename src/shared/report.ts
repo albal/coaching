@@ -136,14 +136,52 @@ export const planSchema = z.object({
   }),
 });
 
+// Numbers in a rewrite must come from the original bullet; anything else goes
+// in a [placeholder] for the candidate to fill in.
+function numbersOutsidePlaceholders(text: string): string[] {
+  return text.replace(/\[[^\]]*\]/g, "").match(/\d+(?:[.,]\d+)?/g) ?? [];
+}
+
+export function inventsNumbers(original: string, rewritten: string): boolean {
+  const known = new Set(original.match(/\d+(?:[.,]\d+)?/g) ?? []);
+  return numbersOutsidePlaceholders(rewritten).some((n) => !known.has(n));
+}
+
+export const rewritesSchema = z
+  .object({
+    bullets: z.array(
+      z.object({
+        original: z.string(),
+        rewritten: z.string(),
+        // Each placeholder as it appears in the rewrite, e.g. "[X%]".
+        placeholders: z.array(z.string()),
+      }),
+    ),
+    missingKeywords: z.array(
+      z.object({
+        keyword: z.string(),
+        // The Resume line that makes claiming this keyword honest.
+        evidence: z.string(),
+      }),
+    ),
+    summary: z.string(),
+  })
+  .refine((r) => r.bullets.every((b) => !inventsNumbers(b.original, b.rewritten)), {
+    message: "Rewrites must not invent numbers",
+  })
+  .refine((r) => r.bullets.every((b) => b.placeholders.every((p) => b.rewritten.includes(p))), {
+    message: "Placeholders must appear in the rewrite",
+  });
+
 export const sectionSchemas = {
   extract: extractSchema,
   assess: assessSchema,
   plan: planSchema,
+  rewrites: rewritesSchema,
 } as const;
 
 // Steps that run in parallel once Assess is done.
-export const AFTER_ASSESS = ["plan"] as const satisfies readonly SectionName[];
+export const AFTER_ASSESS = ["plan", "rewrites"] as const satisfies readonly SectionName[];
 
 export const contextSchema = z.object({
   seniority: z.string().trim().max(100).optional(),

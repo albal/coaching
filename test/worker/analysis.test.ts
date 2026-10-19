@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { handleApi } from "../../src/worker/app";
-import { ASSESS, EXTRACT, JOB, PLAN, RESUME, SCRIPT } from "../support/fixtures";
+import { ASSESS, EXTRACT, JOB, RESUME, SCRIPT } from "../support/fixtures";
 import { captureLogger, fakeGemini } from "../support/fake-gemini";
 import { analyse, post } from "../support/worker";
 
@@ -11,16 +11,20 @@ function deps(script: Parameters<typeof fakeGemini>[0]) {
 }
 
 describe("POST /api/analyse", () => {
-  it("streams extract, assess and plan sections, then done", async () => {
+  it("streams every section, then done", async () => {
     const { deps: d } = deps(SCRIPT);
     const { res, events } = await analyse(d, { resume: RESUME, jobDescription: JOB });
     expect(res.headers.get("content-type")).toBe("application/x-ndjson");
-    expect(events).toEqual([
+    expect(events.slice(0, 2)).toEqual([
       { type: "section", section: "extract", data: EXTRACT },
       { type: "section", section: "assess", data: ASSESS },
-      { type: "section", section: "plan", data: PLAN },
-      { type: "done" },
     ]);
+    // Steps after Assess run in parallel, so their order is not fixed.
+    expect(events.slice(2, -1)).toEqual(
+      expect.arrayContaining(Object.entries(SCRIPT).slice(2).map(([section, data]) => ({ type: "section", section, data }))),
+    );
+    expect(events).toHaveLength(Object.keys(SCRIPT).length + 1);
+    expect(events.at(-1)).toEqual({ type: "done" });
   });
 
   it("rejects a request without a Resume or Job Description", async () => {

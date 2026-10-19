@@ -93,3 +93,15 @@ ${asData("job_description", input.jobDescription)}
 Structured facts already extracted:
 ${asData("report", JSON.stringify(extract))}`;
 }
+
+export function rewritesPrompt(input: AnalysisInput, report: unknown): string {
+  return `Suggest Resume improvements for this role. Only rewrite what the Resume already says.
+
+- Pick the bullets that matter most for this Job Description. For each, copy the original Resume line exactly into original, and give a rewritten version in impact form (action, scope, outcome).
+- Use a number only if the original line contains it. Where a number would help but the candidate didn't give one, insert a placeholder such as [X%] or [N services] and list each placeholder.
+- Never invent experience, employers, certifications, tools or numbers.
+- List Job Description keywords missing from the Resume that the candidate can honestly claim, quoting the Resume line that justifies each.
+- Write a short professional summary tailored to this Job Description, using only facts from the Resume.
+
+${common(input, report)}`;
+}

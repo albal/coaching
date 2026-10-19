@@ -120,13 +120,44 @@ function planTab(plan: Sections["plan"]): HTMLElement {
   );
 }
 
+function rewritesTab(r: Sections["rewrites"]): HTMLElement {
+  return h(
+    "div",
+    null,
+    h("p", { class: "callout" }, h("strong", null, "AI-generated, check before use. "), "Every suggestion rewrites something already in your Resume. Fill in any [placeholders] with your real figures, or remove them."),
+    h("h3", null, "Tailored summary"),
+    h("p", null, r.summary),
+    h("h3", null, "Stronger bullets"),
+    r.bullets.length
+      ? h(
+          "ul",
+          { class: "rewrites" },
+          r.bullets.map((b) =>
+            h(
+              "li",
+              null,
+              h("p", { class: "muted" }, h("span", { class: "label" }, "Before: "), b.original),
+              h("p", null, h("span", { class: "label" }, "After: "), b.rewritten),
+              b.placeholders.length ? h("p", { class: "muted" }, `Fill in: ${b.placeholders.join(", ")}`) : null,
+            ),
+          ),
+        )
+      : h("p", { class: "muted" }, "No rewrites suggested."),
+    h("h3", null, "Keywords you can honestly add"),
+    r.missingKeywords.length
+      ? h("ul", null, r.missingKeywords.map((k) => h("li", null, h("strong", null, k.keyword), h("blockquote", null, k.evidence))))
+      : h("p", { class: "muted" }, "None: your Resume already uses the key terms you can claim."),
+  );
+}
+
 export function tabsFor(analysis: Analysis): Tab[] {
   const tabs: Tab[] = [];
-  const { assess, plan } = analysis.report;
+  const { assess, plan, rewrites } = analysis.report;
   if (assess) {
     tabs.push({ id: "fit", label: "Fit", render: () => fitTab(assess) });
     tabs.push({ id: "gaps", label: "Gaps", render: () => gapsTab(assess) });
   }
   if (plan) tabs.push({ id: "plan", label: "Plan", render: () => planTab(plan) });
+  if (rewrites) tabs.push({ id: "resume", label: "Resume", render: () => rewritesTab(rewrites) });
   return tabs;
 }

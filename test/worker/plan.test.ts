@@ -60,10 +60,10 @@ describe("Plan section", () => {
     }
   });
 
-  it("still delivers earlier sections when the plan fails, then reports an error", async () => {
+  it("still delivers the other sections when the plan fails, then reports an error", async () => {
     const { deps } = setup({ ...SCRIPT, plan: { raw: "nope" } });
     const { events } = await analyse(deps, { resume: RESUME, jobDescription: JOB });
-    expect(events.filter((e) => e.type === "section").map((e) => (e as { section: string }).section)).toEqual(["extract", "assess"]);
+    expect(events.filter((e) => e.type === "section").map((e) => (e as { section: string }).section)).toEqual(["extract", "assess", "rewrites"]);
     expect(events.at(-1)).toMatchObject({ type: "error", code: "model_invalid" });
   });
 });

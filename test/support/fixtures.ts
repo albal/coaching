@@ -47,5 +47,17 @@ export const PLAN: Sections["plan"] = {
   recommendation: { decision: "apply_now", reason: "Only one small Must-have Gap." },
 };
 
+export const REWRITES: Sections["rewrites"] = {
+  bullets: [
+    {
+      original: "Cut deploy time from 40 to 6 minutes with GitLab CI.",
+      rewritten: "Rebuilt the GitLab CI pipeline, cutting deploy time from 40 to 6 minutes and saving [N hours] of engineer time each week.",
+      placeholders: ["[N hours]"],
+    },
+  ],
+  missingKeywords: [{ keyword: "GitOps", evidence: "Ran Helm charts on EKS for 40 services." }],
+  summary: "DevOps engineer who runs Kubernetes at scale and speeds up delivery.",
+};
+
 // A reply for every section; override per test.
-export const SCRIPT = { extract: EXTRACT, assess: ASSESS, plan: PLAN };
+export const SCRIPT = { extract: EXTRACT, assess: ASSESS, plan: PLAN, rewrites: REWRITES };

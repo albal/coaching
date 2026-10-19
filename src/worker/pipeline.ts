@@ -2,7 +2,14 @@ import { z } from "zod";
 import { AFTER_ASSESS, constrainFitBand, sectionSchemas, type AnalysisEvent, type SectionName } from "../shared/report";
 import { UpstreamError, type GeminiClient } from "./gemini";
 import type { Logger } from "./log";
-import { COACH_SYSTEM, assessPrompt, extractPrompt, planPrompt, type AnalysisInput } from "./prompts";
+import { COACH_SYSTEM, assessPrompt, extractPrompt, planPrompt, rewritesPrompt, type AnalysisInput } from "./prompts";
+
+const normalise = (t: string) => t.replace(/\s+/g, " ").trim().toLowerCase();
+
+// A rewrite must start from a line that really is in the Resume.
+function quotes(resume: string, line: string): boolean {
+  return normalise(resume).includes(normalise(line));
+}
 
 export class PipelineError extends Error {
   constructor(readonly code: "model_invalid" | "upstream") {
@@ -15,13 +22,17 @@ export function jsonSchemaFor(section: SectionName): object {
   return schema;
 }
 
-// Runs one structured step, validating against its schema and retrying once.
+type Data<S extends SectionName> = z.infer<(typeof sectionSchemas)[S]>;
+
+// Runs one structured step, validating against its schema (and an optional
+// extra check) and retrying once.
 async function runStep<S extends SectionName>(
   gemini: GeminiClient,
   log: Logger,
   section: S,
   prompt: string,
-): Promise<z.infer<(typeof sectionSchemas)[S]>> {
+  check: (data: Data<S>) => boolean = () => true,
+): Promise<Data<S>> {
   const schema = jsonSchemaFor(section);
   for (let attempt = 1; attempt <= 2; attempt++) {
     const started = Date.now();
@@ -37,7 +48,7 @@ async function runStep<S extends SectionName>(
     }
     try {
       const parsed = sectionSchemas[section].safeParse(JSON.parse(text));
-      if (parsed.success) return parsed.data as z.infer<(typeof sectionSchemas)[S]>;
+      if (parsed.success && check(parsed.data as Data<S>)) return parsed.data as Data<S>;
     } catch {
       // fall through to retry
     }
@@ -63,10 +74,14 @@ export async function runAnalysis(
   const report = { extract, assess };
   const prompts: Record<(typeof AFTER_ASSESS)[number], string> = {
     plan: planPrompt(input, report),
+    rewrites: rewritesPrompt(input, report),
+  };
+  const checks: { [S in (typeof AFTER_ASSESS)[number]]?: (data: Data<S>) => boolean } = {
+    rewrites: (data) => data.bullets.every((b) => quotes(input.resume, b.original)),
   };
   const results = await Promise.allSettled(
     AFTER_ASSESS.map(async (section) => {
-      const data = await runStep(gemini, log, section, prompts[section]);
+      const data = await runStep(gemini, log, section, prompts[section], checks[section] as never);
       emit({ type: "section", section, data });
     }),
   );

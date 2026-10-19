@@ -44,7 +44,7 @@ function render(id: string) {
         ? "Reading your Resume and the Job Description…"
         : !analysis.report.assess
           ? "Assessing your fit…"
-          : "Building your plan…";
+          : "Building your plan and Resume suggestions…";
   $("report-error").hidden = analysis.status !== "failed";
   $("report-error-text").textContent = analysis.error ?? "";
   analyseButton.disabled = analysis.status === "running";
