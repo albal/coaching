@@ -13,9 +13,9 @@
     // Cal.com or Calendly link shown at the end of every Report.
     "BOOKING_URL": "",
     // Public Turnstile site key; the secret is TURNSTILE_SECRET_KEY.
-    "TURNSTILE_SITE_KEY": "",
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAFb5fDsrkSy6myj8",
     "ANALYSES_PER_IP_PER_HOUR": "5",
-    "DAILY_ANALYSIS_CAP": "300"
+    "DAILY_ANALYSIS_CAP": "30"
   },
   // Secrets (wrangler secret put): GEMINI_API_KEY, TURNSTILE_SECRET_KEY, PASS_SECRET.
   "ratelimits": [
