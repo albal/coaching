@@ -80,9 +80,15 @@ export function markDownloaded(s: Session, ids: string[]): Session {
   return { ...s, analyses: s.analyses.map((a) => (ids.includes(a.id) ? { ...a, downloaded: true } : a)) };
 }
 
-// Drives the leave-page warning: a finished Report the user hasn't saved.
+// A finished Report, or one cut short after the Fit and Gaps arrived (for
+// example when the coach runs out of credit), can be downloaded.
+export function isDownloadable(a: Analysis): boolean {
+  return a.status === "complete" || (a.status === "failed" && a.report.assess !== undefined);
+}
+
+// Drives the leave-page warning: a Report the user hasn't saved.
 export function hasUndownloadedReports(s: Session): boolean {
-  return s.analyses.some((a) => a.status === "complete" && !a.downloaded);
+  return s.analyses.some((a) => isDownloadable(a) && !a.downloaded);
 }
 
 // Ending a Session deletes everything: the result is a brand new Session.

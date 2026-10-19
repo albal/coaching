@@ -12,7 +12,7 @@ function quotes(resume: string, line: string): boolean {
 }
 
 export class PipelineError extends Error {
-  constructor(readonly code: "model_invalid" | "upstream") {
+  constructor(readonly code: "model_invalid" | "upstream" | "out_of_credit") {
     super(code);
   }
 }
@@ -44,7 +44,7 @@ async function runStep<S extends SectionName>(
     } catch (err) {
       const status = err instanceof UpstreamError ? err.status : undefined;
       log.event({ event: "model_error", step: section, status });
-      throw new PipelineError("upstream");
+      throw new PipelineError(err instanceof UpstreamError && err.outOfCredit ? "out_of_credit" : "upstream");
     }
     try {
       const parsed = sectionSchemas[section].safeParse(JSON.parse(text));

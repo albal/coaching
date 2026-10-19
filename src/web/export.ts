@@ -6,7 +6,7 @@ import {
   gapsOf,
   type Requirement,
 } from "../shared/report";
-import type { Analysis, Session } from "./session";
+import { isDownloadable, type Analysis, type Session } from "./session";
 
 // Builds the downloadable Markdown for a Report. Pure, so it runs (and is
 // tested) without a DOM; the file is assembled in the browser, never on a server.
@@ -127,7 +127,7 @@ export function sessionToMarkdown(s: Session, opts: ExportOptions): string {
 
 // Analyses whose Report can be downloaded.
 export function reportsOf(s: Session): Analysis[] {
-  return s.analyses.filter((a) => a.status === "complete");
+  return s.analyses.filter(isDownloadable);
 }
 
 export function fileNameFor(title: string): string {

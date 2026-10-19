@@ -238,7 +238,11 @@ export type ErrorCode =
   | "too_large"
   | "chat_limit"
   | "model_invalid"
+  | "out_of_credit"
   | "upstream";
+
+export const OUT_OF_CREDIT_MESSAGE =
+  "The coach has run out of credit for now, so new Analyses and Coaching Chat questions are paused. Please check back later.";
 
 // Input size limits, enforced by the Worker and mirrored in the page.
 export const LIMITS = {

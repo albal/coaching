@@ -1,5 +1,8 @@
 import type { SectionName, Sections } from "../shared/report";
-import type { GeminiClient } from "./gemini";
+import { UpstreamError, type GeminiClient } from "./gemini";
+
+// Put this in a Resume to make the demo behave like an empty prepaid balance.
+export const DEMO_OUT_OF_CREDIT = "[demo:out-of-credit]";
 import { jsonSchemaFor } from "./pipeline";
 
 // Canned replies for local development and the end-to-end privacy tests.
@@ -66,6 +69,7 @@ const REPLIES: Sections = {
 
 export const demoGemini: GeminiClient = {
   async generateJson({ prompt, schema }) {
+    if (prompt.includes(DEMO_OUT_OF_CREDIT)) throw new UpstreamError(402, true);
     const section = (Object.keys(REPLIES) as SectionName[]).find(
       (s) => JSON.stringify(jsonSchemaFor(s)) === JSON.stringify(schema),
     );

@@ -4,11 +4,15 @@ import type { Reservation } from "./protection";
 // limit, the global daily cap, and daily usage metrics. It never sees user
 // content: only a hashed IP key, the limits to apply and metric names.
 
-export const METRICS = ["analysis_completed", "download", "booking_click"] as const;
+export const METRICS = ["analysis_completed", "download", "booking_click", "out_of_credit"] as const;
 export type Metric = (typeof METRICS)[number];
 export type DailyMetrics = Record<string, Partial<Record<Metric, number>>>;
 
 const METRIC_DAYS = 90;
+
+// How long the app stays locked after Gemini reports no credit, before the
+// next request tries Gemini again. Al can unlock sooner after topping up.
+export const CREDIT_LOCK_MS = 15 * 60 * 1000;
 
 interface Storage {
   get<T>(key: string): Promise<T | undefined>;
@@ -42,6 +46,12 @@ export class UsageGuard {
       return Response.json({ ok: true });
     }
     if (pathname === "/metrics") return Response.json(await this.metrics());
+    if (pathname === "/credit") return Response.json({ locked: await this.creditLocked() });
+    if (pathname === "/credit/lock") return Response.json({ locked: await this.lockCredit() });
+    if (pathname === "/credit/unlock") {
+      await this.state.storage.delete("creditLockedAt");
+      return Response.json({ locked: false });
+    }
     const { key, perHour, perDay } = (await req.json()) as ReserveRequest;
     return Response.json({ result: await this.reserve(key, perHour, perDay) });
   }
@@ -54,6 +64,20 @@ export class UsageGuard {
     const oldest = new Date(this.now() - METRIC_DAYS * 24 * HOUR_MS).toISOString().slice(0, 10);
     for (const d of Object.keys(all)) if (d < oldest) delete all[d];
     await this.state.storage.put("metrics", all);
+  }
+
+  // Content-free: just the time the lock started.
+  async creditLocked(): Promise<boolean> {
+    const at = await this.state.storage.get<number>("creditLockedAt");
+    return at !== undefined && this.now() - at < CREDIT_LOCK_MS;
+  }
+
+  async lockCredit(): Promise<boolean> {
+    if (!(await this.creditLocked())) {
+      await this.state.storage.put("creditLockedAt", this.now());
+      await this.count("out_of_credit");
+    }
+    return true;
   }
 
   async metrics(): Promise<DailyMetrics> {
@@ -100,6 +124,15 @@ export function usageClient(ns: DurableObjectNamespaceLike, limits: { perHour: n
     },
     async metrics(): Promise<DailyMetrics> {
       return (await (await call("/metrics")).json()) as DailyMetrics;
+    },
+    async isLocked(): Promise<boolean> {
+      return ((await (await call("/credit")).json()) as { locked: boolean }).locked;
+    },
+    async lock(): Promise<void> {
+      await call("/credit/lock");
+    },
+    async unlock(): Promise<void> {
+      await call("/credit/unlock");
     },
     async reserveAnalysis(ip: string): Promise<Reservation> {
       const body: ReserveRequest = { key: await hashIp(ip), ...limits };

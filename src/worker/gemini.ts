@@ -17,9 +17,26 @@ export interface GeminiClient {
 }
 
 export class UpstreamError extends Error {
-  constructor(readonly status: number) {
+  constructor(
+    readonly status: number,
+    // True when the prepaid balance has run out (not an ordinary rate limit).
+    readonly outOfCredit = false,
+  ) {
     super(`Gemini request failed with status ${status}`);
   }
+}
+
+// A prepaid key with no balance left fails with 402 Payment Required, or with
+// a quota error whose message is about credit or billing. Plain per-minute
+// rate limits (429 without that wording) are not treated as out of credit.
+export async function upstreamError(res: Response): Promise<UpstreamError> {
+  if (res.status === 402) return new UpstreamError(402, true);
+  if (res.status !== 429 && res.status !== 403) return new UpstreamError(res.status);
+  // Google's error bodies describe the failure, not the prompt; only a
+  // yes/no is kept from it and the text is never logged.
+  const body = (await res.json().catch(() => null)) as { error?: { status?: string; message?: string } } | null;
+  const text = `${body?.error?.status ?? ""} ${body?.error?.message ?? ""}`;
+  return new UpstreamError(res.status, /credit|billing|prepa(id|y)|balance|payment/i.test(text));
 }
 
 const BASE = "https://generativelanguage.googleapis.com/v1beta/models";
@@ -44,7 +61,7 @@ export function createGeminiClient(opts: { apiKey: string; model: string; fetch?
       headers: { "content-type": "application/json", "x-goog-api-key": opts.apiKey },
       body: JSON.stringify(body),
     });
-    if (!res.ok) throw new UpstreamError(res.status);
+    if (!res.ok) throw await upstreamError(res);
     return res;
   }
 

@@ -35,7 +35,7 @@ describe("usage metrics", () => {
     await handleApi(event("booking_click"), deps);
     const res = await handleApi(read("Bearer metrics-token"), deps);
     const body = (await res.json()) as { days: Record<string, unknown>; totals: unknown };
-    expect(body.totals).toEqual({ analysis_completed: 1, download: 2, booking_click: 1 });
+    expect(body.totals).toEqual({ analysis_completed: 1, download: 2, booking_click: 1, out_of_credit: 0 });
     expect(Object.values(body.days)).toEqual([{ analysis_completed: 1, download: 2, booking_click: 1 }]);
     expect(res.headers.get("cache-control")).toBe("no-store");
   });

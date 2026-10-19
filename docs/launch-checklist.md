@@ -9,6 +9,14 @@ Work through this before the first public launch, and repeat the marked items wh
 - [ ] Project logging in AI Studio is **off** for this project, or you have accepted and disclosed its retention.
 - [ ] No Gemini Files API, explicit caching, Search/Maps grounding or Interactions API storage is in use (the code uses none; re-check after any change to `src/worker/gemini.ts`).
 
+## Prepaid credit
+
+- [ ] Decide whether Auto-reload stays **off** (the app locks when the balance hits £0.00) or on (Google tops up from your card).
+- [ ] Set `DAILY_ANALYSIS_CAP` so one day can't spend the whole balance. A full Analysis plus a short Coaching Chat costs about $0.03 at current Flash-Lite prices, so £4 covers roughly 150 Analyses. Measure the real cost from AI Studio usage after the first few runs.
+- [ ] Know how to unlock after topping up. The lock clears itself 15 minutes after the last out-of-credit error, or at once with:
+      `curl -X POST https://<your-domain>/api/admin/unlock -H "authorization: Bearer $METRICS_TOKEN"`
+- [ ] `out_of_credit` appears in `GET /api/metrics`, so you can see when (and how often) the balance ran out.
+
 ## No proxy in the call path
 
 - [ ] The Worker calls `generativelanguage.googleapis.com` directly. There's no Cloudflare AI Gateway or other proxy in between (also checked by `test/worker/privacy.test.ts`).

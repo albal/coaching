@@ -116,7 +116,7 @@ describe("GET /api/config", () => {
   it("returns the booking link and nothing secret", async () => {
     const { deps: d } = deps(SCRIPT);
     const res = await handleApi(new Request("https://coach.test/api/config"), { ...d, config: { bookingUrl: "https://cal.com/al" } });
-    expect(await res.json()).toEqual({ bookingUrl: "https://cal.com/al", turnstileSiteKey: "" });
+    expect(await res.json()).toEqual({ bookingUrl: "https://cal.com/al", turnstileSiteKey: "", available: true });
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
 });

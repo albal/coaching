@@ -1,6 +1,6 @@
 import { chatHistorySchema, MAX_CHAT_TURNS, userTurns, type ChatEvent } from "../shared/chat";
-import { contextSchema, LIMITS, type AnalysisEvent, type ErrorCode } from "../shared/report";
-import type { GeminiClient } from "./gemini";
+import { contextSchema, LIMITS, OUT_OF_CREDIT_MESSAGE, type AnalysisEvent, type ErrorCode } from "../shared/report";
+import { UpstreamError, type GeminiClient } from "./gemini";
 import { json, ndjsonStream, SECURITY_HEADERS } from "./http";
 import type { Logger } from "./log";
 import { PipelineError, runAnalysis } from "./pipeline";
@@ -11,6 +11,15 @@ import { METRICS, type DailyMetrics, type Metric } from "./usage-guard";
 export interface PublicConfig {
   bookingUrl: string;
   turnstileSiteKey: string;
+  // False while the prepaid Gemini credit has run out.
+  available: boolean;
+}
+
+// The app-wide lock set when the prepaid Gemini balance runs out.
+export interface CreditLock {
+  isLocked(): Promise<boolean>;
+  lock(): Promise<void>;
+  unlock(): Promise<void>;
 }
 
 export interface Metrics {
@@ -25,9 +34,30 @@ export interface Deps {
   config?: Partial<PublicConfig>;
   // Content-free usage counts; optional because nothing depends on them.
   metrics?: Metrics;
-  // Bearer token for reading metrics; the endpoint is off without one.
+  // Bearer token for reading metrics and clearing the credit lock; both
+  // endpoints are off without one.
   metricsToken?: string;
+  credit?: CreditLock;
 }
+
+async function creditLocked(deps: Deps): Promise<boolean> {
+  try {
+    return (await deps.credit?.isLocked()) ?? false;
+  } catch {
+    return false;
+  }
+}
+
+async function lockCredit(deps: Deps): Promise<void> {
+  deps.log.event({ event: "out_of_credit" });
+  try {
+    await deps.credit?.lock();
+  } catch {
+    deps.log.event({ event: "credit_lock_failed" });
+  }
+}
+
+const outOfCredit = () => fail(503, "out_of_credit", OUT_OF_CREDIT_MESSAGE);
 
 // Metrics must never break a request.
 async function count(deps: Deps, metric: Metric): Promise<void> {
@@ -41,6 +71,7 @@ async function count(deps: Deps, metric: Metric): Promise<void> {
 const ERROR_MESSAGES = {
   model_invalid: "The coach gave an answer we couldn't read. Please try again.",
   upstream: "The coach is unavailable right now. Please try again in a moment.",
+  out_of_credit: OUT_OF_CREDIT_MESSAGE,
 } as const;
 
 function isText(v: unknown): v is string {
@@ -71,6 +102,8 @@ async function readBody(req: Request): Promise<Record<string, unknown> | "too_la
 // Every model-calling endpoint needs the pass issued after Turnstile, and
 // passes the short-burst limiter.
 async function guard(req: Request, deps: Deps, limiter: "analyse" | "chat"): Promise<Response | null> {
+  // While locked, refuse at once: no Gemini call, no limits consumed.
+  if (await creditLocked(deps)) return outOfCredit();
   if (!(await deps.protection.passes.check(req.headers.get(PASS_HEADER)))) {
     return fail(401, "verification_required", "Please complete the quick check to continue.");
   }
@@ -130,6 +163,7 @@ async function analyse(req: Request, deps: Deps): Promise<Response> {
       await count(deps, "analysis_completed");
     } catch (err) {
       const code = err instanceof PipelineError ? err.code : "upstream";
+      if (code === "out_of_credit") await lockCredit(deps);
       emit({ type: "error", code, message: ERROR_MESSAGES[code] });
       deps.log.event({ event: "analysis_failed", code });
     }
@@ -166,9 +200,11 @@ async function chat(req: Request, deps: Deps): Promise<Response> {
       }
       emit({ type: "done" });
       deps.log.event({ event: "chat_completed", ms: Date.now() - started });
-    } catch {
-      emit({ type: "error", code: "upstream", message: ERROR_MESSAGES.upstream });
-      deps.log.event({ event: "chat_failed" });
+    } catch (err) {
+      const code = err instanceof UpstreamError && err.outOfCredit ? "out_of_credit" : "upstream";
+      if (code === "out_of_credit") await lockCredit(deps);
+      emit({ type: "error", code, message: ERROR_MESSAGES[code] });
+      deps.log.event({ event: "chat_failed", code });
     }
   });
 }
@@ -193,10 +229,27 @@ function sameToken(a: string, b: string): boolean {
   return diff === 0;
 }
 
+// Operator endpoints: off without a token, and Bearer-authenticated.
+function operatorAuth(req: Request, deps: Deps): Response | null {
+  if (!deps.metricsToken) return fail(404, "bad_request", "Not found.");
+  if (!sameToken(req.headers.get("authorization") ?? "", `Bearer ${deps.metricsToken}`)) return fail(401, "bad_request", "Unauthorised.");
+  return null;
+}
+
+// After topping up the Gemini balance, Al clears the lock at once rather
+// than waiting for it to expire.
+async function unlock(req: Request, deps: Deps): Promise<Response> {
+  const denied = operatorAuth(req, deps);
+  if (denied) return denied;
+  await deps.credit?.unlock();
+  deps.log.event({ event: "credit_unlocked" });
+  return json({ locked: false });
+}
+
 async function readMetrics(req: Request, deps: Deps): Promise<Response> {
-  const auth = req.headers.get("authorization") ?? "";
-  if (!deps.metricsToken || !deps.metrics) return fail(404, "bad_request", "Not found.");
-  if (!sameToken(auth, `Bearer ${deps.metricsToken}`)) return fail(401, "bad_request", "Unauthorised.");
+  const denied = operatorAuth(req, deps);
+  if (denied) return denied;
+  if (!deps.metrics) return fail(404, "bad_request", "Not found.");
   const days = await deps.metrics.metrics();
   const totals = Object.fromEntries(METRICS.map((m) => [m, Object.values(days).reduce((n, d) => n + (d[m] ?? 0), 0)]));
   return json({ days, totals });
@@ -204,6 +257,7 @@ async function readMetrics(req: Request, deps: Deps): Promise<Response> {
 
 const ROUTES: Record<string, (req: Request, deps: Deps) => Promise<Response>> = {
   "/api/event": event,
+  "/api/admin/unlock": unlock,
   "/api/verify": verify,
   "/api/analyse": analyse,
   "/api/chat": chat,
@@ -216,6 +270,7 @@ export async function handleApi(req: Request, deps: Deps): Promise<Response> {
     return json({
       bookingUrl: deps.config?.bookingUrl ?? "",
       turnstileSiteKey: deps.config?.turnstileSiteKey ?? "",
+      available: !(await creditLocked(deps)),
     } satisfies PublicConfig);
   }
   if (pathname === "/api/metrics") {

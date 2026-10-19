@@ -5,6 +5,7 @@ import {
   completeAnalysis,
   createSession,
   endSession,
+  failAnalysis,
   getAnalysis,
   hasUndownloadedReports,
   markDownloaded,
@@ -87,5 +88,24 @@ describe("download tracking and ending the Session", () => {
   it("clears everything when the Session ends", () => {
     const s = completed(ok(setResume(createSession(), RESUME)), "a");
     expect(endSession(s)).toEqual(createSession());
+  });
+});
+
+describe("Reports cut short", () => {
+  it("can still be downloaded once Fit and Gaps have arrived", () => {
+    let s = ok(addAnalysis(ok(setResume(createSession(), RESUME)), "a", JOB));
+    s = recordSection(s, "a", "extract", SCRIPT.extract);
+    s = recordSection(s, "a", "assess", SCRIPT.assess);
+    s = failAnalysis(s, "a", "out of credit", "out_of_credit");
+    expect(hasUndownloadedReports(s)).toBe(true);
+    const md = sessionToMarkdown(s, { bookingUrl: BOOKING });
+    expect(md).toContain("## Fit Band: Stretch");
+    expect(md).not.toContain("## Plan");
+  });
+
+  it("are not downloadable if they failed before the Fit Band", () => {
+    const s = failAnalysis(ok(addAnalysis(ok(setResume(createSession(), RESUME)), "a", JOB)), "a", "boom");
+    expect(hasUndownloadedReports(s)).toBe(false);
+    expect(sessionToMarkdown(s, { bookingUrl: BOOKING })).toBe("");
   });
 });

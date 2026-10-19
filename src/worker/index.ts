@@ -19,7 +19,7 @@ export interface Env {
   TURNSTILE_SECRET_KEY?: string;
   // Signs Turnstile passes and keys hashed IP counters.
   PASS_SECRET?: string;
-  // Bearer token for GET /api/metrics; the endpoint is off without it.
+  // Bearer token for GET /api/metrics and POST /api/admin/unlock; both are off without it.
   METRICS_TOKEN?: string;
   ANALYSES_PER_IP_PER_HOUR?: string;
   DAILY_ANALYSIS_CAP?: string;
@@ -68,6 +68,7 @@ export default {
       log: consoleLogger,
       protection: services.protection,
       metrics: services.usage,
+      credit: services.usage,
       metricsToken: env.METRICS_TOKEN,
       config: { bookingUrl: env.BOOKING_URL ?? "", turnstileSiteKey: env.TURNSTILE_SITE_KEY ?? "" },
     });

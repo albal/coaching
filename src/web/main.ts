@@ -1,4 +1,4 @@
-import type { AnalysisContext, AnalysisEvent } from "../shared/report";
+import { OUT_OF_CREDIT_MESSAGE, type AnalysisContext, type AnalysisEvent } from "../shared/report";
 import { streamAnalysis, streamChat, verify } from "./api";
 import { mountTurnstile, takeToken } from "./turnstile";
 import { h } from "./dom";
@@ -18,6 +18,7 @@ import {
   chatQuestionsLeft,
   recordExchange,
   hasUndownloadedReports,
+  isDownloadable,
   MAX_ANALYSES,
   markDownloaded,
   recordSection,
@@ -32,6 +33,9 @@ let currentId: string | null = null;
 let activeTab = "fit";
 let bookingUrl = "";
 let turnstileSiteKey = "";
+// Set when the coach's prepaid Gemini credit has run out: everything that
+// would call the coach is disabled until the page is reloaded later.
+let locked = false;
 // The pass from the Turnstile check: in memory only, gone with the tab.
 let pass: string | null = null;
 // The question and reply in flight; recorded on the Session only once complete.
@@ -45,6 +49,7 @@ const jdInput = $<HTMLTextAreaElement>("job-description");
 const formError = $("form-error");
 const analyseButton = $<HTMLButtonElement>("analyse");
 const reportEl = $("report");
+$("locked-text").textContent = OUT_OF_CREDIT_MESSAGE;
 const statusEl = $("report-status");
 
 function showFormError(message: string | null) {
@@ -81,13 +86,19 @@ function renderSwitcher() {
   );
 }
 
+function lockOut() {
+  locked = true;
+  render();
+}
+
 function renderForm() {
   const hasResume = session.resume !== null;
   const live = session.analyses.filter((a) => a.status !== "failed").length;
   const running = session.analyses.some((a) => a.status === "running");
   $("change-resume").hidden = !hasResume;
   analyseButton.textContent = live > 0 ? "Analyse another Job Description" : "Analyse";
-  analyseButton.disabled = running || (hasResume && !canAddAnalysis(session));
+  $("locked").hidden = !locked;
+  analyseButton.disabled = locked || running || (hasResume && !canAddAnalysis(session));
   const left = $("analyses-left");
   left.hidden = !hasResume;
   left.textContent = canAddAnalysis(session)
@@ -116,8 +127,8 @@ function render() {
   $("report-error").hidden = analysis.status !== "failed";
   $("report-error-text").textContent = analysis.error ?? "";
   $("report-error").querySelector<HTMLElement>("[data-busy-booking]")!.hidden = analysis.errorCode !== "busy" || !bookingUrl;
-  $("retry").hidden = analysis.errorCode === "busy";
-  $("report-actions").hidden = analysis.status !== "complete";
+  $("retry").hidden = analysis.errorCode === "busy" || locked;
+  $("report-actions").hidden = !isDownloadable(analysis);
   $("download-all").hidden = reportsOf(session).length < 2;
   renderChat(analysis);
 }
@@ -136,8 +147,8 @@ function renderChat(analysis: Analysis) {
   $("chat-left").textContent = left
     ? `${left} question${left === 1 ? "" : "s"} left in this Coaching Chat.`
     : "You've reached the limit for this Coaching Chat. Download your Report to keep it, or book a session for more help.";
-  $<HTMLButtonElement>("chat-send").disabled = !!pendingChat || !canChat(session, analysis.id);
-  $<HTMLTextAreaElement>("chat-input").disabled = !canChat(session, analysis.id);
+  $<HTMLButtonElement>("chat-send").disabled = locked || !!pendingChat || !canChat(session, analysis.id);
+  $<HTMLTextAreaElement>("chat-input").disabled = locked || !canChat(session, analysis.id);
 }
 
 async function ask(question: string) {
@@ -161,6 +172,7 @@ async function ask(question: string) {
         if (e.type === "delta") pendingChat.reply += e.text;
         else if (e.type === "error") {
           if (e.code === "verification_required") pass = null;
+          if (e.code === "out_of_credit") locked = true;
           failed = e.code === "verification_required" ? NEEDS_CHECK : e.message;
         }
         render();
@@ -259,11 +271,13 @@ async function run(jobDescription: string) {
     else if (e.type === "done") (session = completeAnalysis(session, id)), (finished = true);
     else if (e.type === "error") {
       if (e.code === "verification_required") pass = null;
+      if (e.code === "out_of_credit") locked = true;
       const message = e.code === "verification_required" ? NEEDS_CHECK : e.message;
       session = failAnalysis(session, id, message, e.code);
       finished = true;
     }
-    render();
+    if (locked) lockOut();
+    else render();
   });
   if (!finished && getAnalysis(session, id)) {
     session = failAnalysis(session, id, "The connection dropped before your Report finished. Please try again.");
@@ -286,7 +300,7 @@ const includeChat = () => $<HTMLInputElement>("include-chat").checked;
 
 function current(): Analysis | undefined {
   const analysis = currentId ? getAnalysis(session, currentId) : undefined;
-  return analysis?.status === "complete" ? analysis : undefined;
+  return analysis && isDownloadable(analysis) ? analysis : undefined;
 }
 
 function downloadCurrent() {
@@ -448,8 +462,9 @@ wireUpload("resume-file", resumeInput, "resume-file-status", "Resume");
 wireUpload("jd-file", jdInput, "jd-file-status", "Job Description");
 
 void fetch("/api/config")
-  .then((r) => r.json() as Promise<{ bookingUrl?: string; turnstileSiteKey?: string }>)
+  .then((r) => r.json() as Promise<{ bookingUrl?: string; turnstileSiteKey?: string; available?: boolean }>)
   .then((c) => {
+    if (c.available === false) lockOut();
     bookingUrl = c.bookingUrl ?? "";
     turnstileSiteKey = c.turnstileSiteKey ?? "";
     renderBooking();

@@ -39,7 +39,8 @@
         "BOOKING_URL": "https://example.com/book",
         "TURNSTILE_SITE_KEY": "",
         "ANALYSES_PER_IP_PER_HOUR": "1000",
-        "DAILY_ANALYSIS_CAP": "1000"
+        "DAILY_ANALYSIS_CAP": "1000",
+        "METRICS_TOKEN": "e2e-operator-token"
       },
       "ratelimits": [
         { "name": "ANALYSE_BURST", "namespace_id": "2001", "simple": { "limit": 1000, "period": 60 } },
