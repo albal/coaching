@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { openProtection } from "../support/protection";
 import { describe, expect, it } from "vitest";
 import { constrainFitBand, type Requirement } from "../../src/shared/report";
 import { COACH_SYSTEM } from "../../src/worker/prompts";
@@ -8,7 +9,7 @@ import { analyse } from "../support/worker";
 
 function run(assess: unknown) {
   const gemini = fakeGemini({ ...SCRIPT, assess });
-  return { gemini, result: analyse({ gemini: gemini.client, log: captureLogger().logger }, { resume: RESUME, jobDescription: JOB }) };
+  return { gemini, result: analyse({ gemini: gemini.client, log: captureLogger().logger, protection: openProtection().protection }, { resume: RESUME, jobDescription: JOB }) };
 }
 
 const req = (mustHave: boolean, evidence: Requirement["evidence"]): Requirement => ({

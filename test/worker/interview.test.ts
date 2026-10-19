@@ -1,11 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { openProtection } from "../support/protection";
 import { captureLogger, fakeGemini } from "../support/fake-gemini";
 import { INTERVIEW, JOB, RESUME, SCRIPT } from "../support/fixtures";
 import { analyse } from "../support/worker";
 
 function run(interview: unknown) {
   const gemini = fakeGemini({ ...SCRIPT, interview });
-  return { gemini, result: analyse({ gemini: gemini.client, log: captureLogger().logger }, { resume: RESUME, jobDescription: JOB }) };
+  return { gemini, result: analyse({ gemini: gemini.client, log: captureLogger().logger, protection: openProtection().protection }, { resume: RESUME, jobDescription: JOB }) };
 }
 
 describe("Interview prep section", () => {

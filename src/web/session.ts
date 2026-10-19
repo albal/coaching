@@ -17,6 +17,7 @@ export interface Analysis {
   report: Report;
   status: AnalysisStatus;
   error?: string;
+  errorCode?: string;
   downloaded: boolean;
   chat: ChatTurn[];
 }
@@ -67,8 +68,8 @@ export function completeAnalysis(s: Session, id: string): Session {
   return update(s, id, (a) => ({ ...a, status: "complete" }));
 }
 
-export function failAnalysis(s: Session, id: string, message: string): Session {
-  return update(s, id, (a) => ({ ...a, status: "failed", error: message }));
+export function failAnalysis(s: Session, id: string, message: string, code?: string): Session {
+  return update(s, id, (a) => ({ ...a, status: "failed", error: message, ...(code && { errorCode: code }) }));
 }
 
 export function getAnalysis(s: Session, id: string): Analysis | undefined {

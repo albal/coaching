@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { openProtection } from "../support/protection";
 import { MAX_CHAT_TURNS, type ChatEvent, type ChatTurn } from "../../src/shared/chat";
 import { readNdjson } from "../../src/web/api";
 import { handleApi } from "../../src/worker/app";
@@ -11,7 +12,7 @@ const REPORT = { extract: SCRIPT.extract, assess: SCRIPT.assess };
 function setup(chunks = ["Port ", "one pipeline ", "first."]) {
   const gemini = fakeGemini(SCRIPT, chunks);
   const log = captureLogger();
-  return { gemini, log, deps: { gemini: gemini.client, log: log.logger } };
+  return { gemini, log, deps: { gemini: gemini.client, log: log.logger, protection: openProtection().protection } };
 }
 
 async function chat(deps: ReturnType<typeof setup>["deps"], body: Record<string, unknown>) {
@@ -89,7 +90,7 @@ describe("POST /api/chat", () => {
     const marker = "CHAT-MARKER-91c2";
     const res = await handleApi(
       post("/api/chat", { resume: `${RESUME} ${marker}`, jobDescription: JOB, report: REPORT, history: [], message: `Question ${marker}` }),
-      { gemini: gemini.client, log: log.logger },
+      { gemini: gemini.client, log: log.logger, protection: openProtection().protection },
     );
     const events: ChatEvent[] = [];
     await readNdjson<ChatEvent>(res, (e) => events.push(e));

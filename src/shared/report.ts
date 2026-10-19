@@ -228,4 +228,22 @@ export type AnalysisEvent =
   | { type: "error"; code: ErrorCode; message: string }
   | { type: "done" };
 
-export type ErrorCode = "bad_request" | "consent_required" | "model_invalid" | "upstream";
+export type ErrorCode =
+  | "bad_request"
+  | "consent_required"
+  | "verification_required"
+  | "verification_failed"
+  | "rate_limited"
+  | "busy"
+  | "too_large"
+  | "chat_limit"
+  | "model_invalid"
+  | "upstream";
+
+// Input size limits, enforced by the Worker and mirrored in the page.
+export const LIMITS = {
+  resumeChars: 30_000,
+  jobDescriptionChars: 20_000,
+  messageChars: 2_000,
+  bodyBytes: 400_000,
+} as const;

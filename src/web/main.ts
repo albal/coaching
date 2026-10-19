@@ -1,5 +1,6 @@
 import type { AnalysisContext, AnalysisEvent } from "../shared/report";
-import { streamAnalysis, streamChat } from "./api";
+import { streamAnalysis, streamChat, verify } from "./api";
+import { mountTurnstile, takeToken } from "./turnstile";
 import { h } from "./dom";
 import { fileNameFor, reportToMarkdown, reportsOf, sessionToMarkdown, titleOf } from "./export";
 import { EXTRACT_MESSAGES, extractText } from "./extract";
@@ -30,6 +31,9 @@ let session: Session = createSession();
 let currentId: string | null = null;
 let activeTab = "fit";
 let bookingUrl = "";
+let turnstileSiteKey = "";
+// The pass from the Turnstile check: in memory only, gone with the tab.
+let pass: string | null = null;
 // The question and reply in flight; recorded on the Session only once complete.
 let pendingChat: { id: string; question: string; reply: string } | null = null;
 
@@ -105,6 +109,8 @@ function render() {
           : "Building your plan, Resume suggestions and interview prep…";
   $("report-error").hidden = analysis.status !== "failed";
   $("report-error-text").textContent = analysis.error ?? "";
+  $("report-error").querySelector<HTMLElement>("[data-busy-booking]")!.hidden = analysis.errorCode !== "busy" || !bookingUrl;
+  $("retry").hidden = analysis.errorCode === "busy";
   $("report-actions").hidden = analysis.status !== "complete";
   $("download-all").hidden = reportsOf(session).length < 2;
   renderChat(analysis);
@@ -138,15 +144,22 @@ async function ask(question: string) {
   $<HTMLTextAreaElement>("chat-input").value = "";
   render();
   let failed: string | null = null;
-  await streamChat(
-    { resume: session.resume!, jobDescription: analysis.jobDescription, report: analysis.report, history: analysis.chat, message: question },
-    (e) => {
-      if (!pendingChat || pendingChat.id !== id) return;
-      if (e.type === "delta") pendingChat.reply += e.text;
-      else if (e.type === "error") failed = e.message;
-      render();
-    },
-  );
+  const currentPass = await ensurePass();
+  if (!currentPass) failed = NEEDS_CHECK;
+  else
+    await streamChat(
+      { resume: session.resume!, jobDescription: analysis.jobDescription, report: analysis.report, history: analysis.chat, message: question },
+      currentPass,
+      (e) => {
+        if (!pendingChat || pendingChat.id !== id) return;
+        if (e.type === "delta") pendingChat.reply += e.text;
+        else if (e.type === "error") {
+          if (e.code === "verification_required") pass = null;
+          failed = e.code === "verification_required" ? NEEDS_CHECK : e.message;
+        }
+        render();
+      },
+    );
   const reply = pendingChat?.id === id ? pendingChat.reply.trim() : "";
   pendingChat = null;
   if (!getAnalysis(session, id)) return; // the Session ended mid-reply
@@ -205,7 +218,23 @@ function readContext(): AnalysisContext {
   };
 }
 
+// Gets (or reuses) the pass that unlocks the coach for this Session.
+async function ensurePass(): Promise<string | null> {
+  if (pass) return pass;
+  const token = turnstileSiteKey ? takeToken() : "";
+  if (turnstileSiteKey && !token) return null;
+  pass = await verify(token);
+  return pass;
+}
+
+const NEEDS_CHECK = "Please complete the quick check below, then try again.";
+
 async function run(jobDescription: string) {
+  const currentPass = await ensurePass();
+  if (!currentPass) {
+    showFormError(NEEDS_CHECK);
+    return;
+  }
   const id = crypto.randomUUID();
   const context = readContext();
   const added = addAnalysis(session, id, jobDescription, context);
@@ -218,11 +247,16 @@ async function run(jobDescription: string) {
   activeTab = "fit";
   render();
   let finished = false;
-  await streamAnalysis({ resume: session.resume!, jobDescription, context, consent: true }, (e: AnalysisEvent) => {
+  await streamAnalysis({ resume: session.resume!, jobDescription, context, consent: true }, currentPass, (e: AnalysisEvent) => {
     if (!getAnalysis(session, id)) return; // the Session ended mid-stream
     if (e.type === "section") session = recordSection(session, id, e.section, e.data);
     else if (e.type === "done") (session = completeAnalysis(session, id)), (finished = true);
-    else if (e.type === "error") (session = failAnalysis(session, id, e.message)), (finished = true);
+    else if (e.type === "error") {
+      if (e.code === "verification_required") pass = null;
+      const message = e.code === "verification_required" ? NEEDS_CHECK : e.message;
+      session = failAnalysis(session, id, message, e.code);
+      finished = true;
+    }
     render();
   });
   if (!finished && getAnalysis(session, id)) {
@@ -283,6 +317,7 @@ function changeResume(download: boolean) {
   session = endSession(session);
   currentId = null;
   pendingChat = null;
+  pass = null;
   resumeInput.readOnly = false;
   $("change-resume-panel").hidden = true;
   render();
@@ -295,6 +330,7 @@ function end() {
   session = endSession(session);
   currentId = null;
   pendingChat = null;
+  pass = null;
   resetForm();
   render();
   $("app").hidden = true;
@@ -396,9 +432,11 @@ wireUpload("resume-file", resumeInput, "resume-file-status", "Resume");
 wireUpload("jd-file", jdInput, "jd-file-status", "Job Description");
 
 void fetch("/api/config")
-  .then((r) => r.json() as Promise<{ bookingUrl?: string }>)
+  .then((r) => r.json() as Promise<{ bookingUrl?: string; turnstileSiteKey?: string }>)
   .then((c) => {
     bookingUrl = c.bookingUrl ?? "";
+    turnstileSiteKey = c.turnstileSiteKey ?? "";
     renderBooking();
+    mountTurnstile($("turnstile"), turnstileSiteKey);
   })
   .catch(() => {});

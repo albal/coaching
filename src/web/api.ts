@@ -18,15 +18,32 @@ export async function readNdjson<T>(res: Response, onEvent: (e: T) => void): Pro
   }
 }
 
+const PASS_HEADER = "x-coach-pass";
+
+// Exchanges a Turnstile token for a short-lived pass, held only in memory.
+export async function verify(token: string): Promise<string | null> {
+  try {
+    const res = await fetch("/api/verify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ token }),
+    });
+    return res.ok ? (((await res.json()) as { pass?: string }).pass ?? null) : null;
+  } catch {
+    return null;
+  }
+}
+
 export async function streamAnalysis(
   body: { resume: string; jobDescription: string; context?: AnalysisContext; consent: true },
+  pass: string,
   onEvent: (e: AnalysisEvent) => void,
 ): Promise<void> {
   let res: Response;
   try {
     res = await fetch("/api/analyse", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", [PASS_HEADER]: pass },
       body: JSON.stringify(body),
     });
   } catch {
@@ -43,13 +60,14 @@ export async function streamAnalysis(
 
 export async function streamChat(
   body: { resume: string; jobDescription: string; report: Report; history: ChatTurn[]; message: string },
+  pass: string,
   onEvent: (e: ChatEvent) => void,
 ): Promise<void> {
   let res: Response;
   try {
     res = await fetch("/api/chat", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", [PASS_HEADER]: pass },
       body: JSON.stringify(body),
     });
   } catch {

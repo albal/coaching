@@ -1,4 +1,5 @@
 import { z } from "zod";
+import type { ErrorCode } from "./report";
 
 // The Coaching Chat contract. The browser sends the whole conversation each
 // turn because the Worker keeps nothing (ADR-0001).
@@ -24,5 +25,5 @@ export function userTurns(history: ChatTurn[]): number {
 
 export type ChatEvent =
   | { type: "delta"; text: string }
-  | { type: "error"; code: "upstream" | "chat_limit"; message: string }
+  | { type: "error"; code: ErrorCode; message: string }
   | { type: "done" };

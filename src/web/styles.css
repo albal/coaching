@@ -160,3 +160,4 @@ label.inline { display: inline-flex; align-items: center; gap: 6px; font-weight:
 .prose { max-width: 720px; }
 .prose h2 { margin-top: 28px; }
 .brand a { color: inherit; text-decoration: none; }
+.turnstile { margin: 0 0 16px; min-height: 65px; }

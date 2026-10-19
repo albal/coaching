@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { openProtection } from "../support/protection";
 import { handleApi } from "../../src/worker/app";
 import type { GeminiClient } from "../../src/worker/gemini";
 import { captureLogger, fakeGemini } from "../support/fake-gemini";
@@ -7,7 +8,7 @@ import { analyse, post } from "../support/worker";
 
 function setup(script: Parameters<typeof fakeGemini>[0] = SCRIPT) {
   const gemini = fakeGemini(script);
-  return { gemini, deps: { gemini: gemini.client, log: captureLogger().logger } };
+  return { gemini, deps: { gemini: gemini.client, log: captureLogger().logger, protection: openProtection().protection } };
 }
 
 describe("Plan section", () => {

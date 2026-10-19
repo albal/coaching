@@ -11,8 +11,22 @@
   "vars": {
     "GEMINI_MODEL": "gemini-3.5-flash-lite",
     // Cal.com or Calendly link shown at the end of every Report.
-    "BOOKING_URL": ""
+    "BOOKING_URL": "",
+    // Public Turnstile site key; the secret is TURNSTILE_SECRET_KEY.
+    "TURNSTILE_SITE_KEY": "",
+    "ANALYSES_PER_IP_PER_HOUR": "5",
+    "DAILY_ANALYSIS_CAP": "300"
   },
+  // Secrets (wrangler secret put): GEMINI_API_KEY, TURNSTILE_SECRET_KEY, PASS_SECRET.
+  "ratelimits": [
+    { "name": "ANALYSE_BURST", "namespace_id": "1001", "simple": { "limit": 3, "period": 60 } },
+    { "name": "CHAT_BURST", "namespace_id": "1002", "simple": { "limit": 12, "period": 60 } }
+  ],
+  // Content-free counters only: the daily Analysis count and hashed-IP hourly hits.
+  "durable_objects": {
+    "bindings": [{ "name": "USAGE_GUARD", "class_name": "UsageGuard" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["UsageGuard"] }],
   // Logs carry content-free metadata only (see src/worker/log.ts).
   "observability": { "enabled": true }
 }

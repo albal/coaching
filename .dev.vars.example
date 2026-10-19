@@ -1,3 +1,8 @@
 # Copy to .dev.vars for local development. Must be a key from a prepaid,
 # billing-enabled Google Cloud project: never a free-tier key (ADR-0002).
 GEMINI_API_KEY=
+# Cloudflare's always-pass Turnstile test secret; the matching site key is
+# 1x00000000000000000000AA (set TURNSTILE_SITE_KEY with --var or in wrangler.jsonc).
+TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
+# Any long random string, e.g. `openssl rand -base64 32`.
+PASS_SECRET=

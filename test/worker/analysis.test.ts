@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { openProtection } from "../support/protection";
 import { handleApi } from "../../src/worker/app";
 import { ASSESS, EXTRACT, JOB, RESUME, SCRIPT } from "../support/fixtures";
 import { captureLogger, fakeGemini } from "../support/fake-gemini";
@@ -7,7 +8,7 @@ import { analyse, post } from "../support/worker";
 function deps(script: Parameters<typeof fakeGemini>[0]) {
   const gemini = fakeGemini(script);
   const log = captureLogger();
-  return { gemini, log, deps: { gemini: gemini.client, log: log.logger } };
+  return { gemini, log, deps: { gemini: gemini.client, log: log.logger, protection: openProtection().protection } };
 }
 
 describe("POST /api/analyse", () => {
@@ -115,7 +116,7 @@ describe("GET /api/config", () => {
   it("returns the booking link and nothing secret", async () => {
     const { deps: d } = deps(SCRIPT);
     const res = await handleApi(new Request("https://coach.test/api/config"), { ...d, config: { bookingUrl: "https://cal.com/al" } });
-    expect(await res.json()).toEqual({ bookingUrl: "https://cal.com/al" });
+    expect(await res.json()).toEqual({ bookingUrl: "https://cal.com/al", turnstileSiteKey: "" });
     expect(res.headers.get("cache-control")).toBe("no-store");
   });
 });

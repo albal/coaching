@@ -23,7 +23,7 @@
       <form id="analysis-form" class="card" novalidate>
         <div class="field">
           <label for="resume">Your Resume</label>
-          <textarea id="resume" name="resume" rows="12" placeholder="Paste your Resume text here, or upload a file" required></textarea>
+          <textarea id="resume" name="resume" rows="12" maxlength="30000" placeholder="Paste your Resume text here, or upload a file" required></textarea>
           <div class="upload">
             <label class="button" for="resume-file">Upload Resume (PDF, DOCX, TXT, MD)</label>
             <input id="resume-file" class="visually-hidden" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" />
@@ -41,7 +41,7 @@
         </div>
         <div class="field">
           <label for="job-description">Job Description</label>
-          <textarea id="job-description" name="jobDescription" rows="12" placeholder="Paste the Job Description here, or upload a file" required></textarea>
+          <textarea id="job-description" name="jobDescription" rows="12" maxlength="20000" placeholder="Paste the Job Description here, or upload a file" required></textarea>
           <div class="upload">
             <label class="button" for="jd-file">Upload Job Description (PDF, DOCX, TXT)</label>
             <input id="jd-file" class="visually-hidden" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" />
@@ -70,6 +70,7 @@
           <label for="consent">I understand my text will be sent to Google Gemini for analysis.</label>
           <p id="consent-help" class="muted">Google doesn't train on it but keeps it for up to 55 days for abuse monitoring, and may process it outside the UK and EU. This site keeps nothing. <a href="/privacy" target="_blank" rel="noopener">Privacy notice</a>.</p>
         </div>
+        <div id="turnstile" class="turnstile" hidden></div>
         <p id="form-error" class="error" role="alert" hidden></p>
         <button id="analyse" type="submit" class="primary">Analyse</button>
         <p id="analyses-left" class="muted" hidden></p>
@@ -106,6 +107,7 @@
         </section>
         <div id="report-error" class="error" role="alert" hidden>
           <p id="report-error-text"></p>
+          <p data-busy-booking hidden><a data-booking-link href="#" target="_blank" rel="noopener">Book a session with Al</a></p>
           <button id="retry" type="button">Try again</button>
         </div>
         <p class="booking" data-booking hidden>Want help landing this role? <a data-booking-link href="#" target="_blank" rel="noopener">Book a session with Al</a>.</p>

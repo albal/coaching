@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { openProtection } from "../support/protection";
 import { inventsNumbers } from "../../src/shared/report";
 import { COACH_SYSTEM } from "../../src/worker/prompts";
 import { captureLogger, fakeGemini } from "../support/fake-gemini";
@@ -7,7 +8,7 @@ import { analyse } from "../support/worker";
 
 function run(rewrites: unknown) {
   const gemini = fakeGemini({ ...SCRIPT, rewrites });
-  return { gemini, result: analyse({ gemini: gemini.client, log: captureLogger().logger }, { resume: RESUME, jobDescription: JOB }) };
+  return { gemini, result: analyse({ gemini: gemini.client, log: captureLogger().logger, protection: openProtection().protection }, { resume: RESUME, jobDescription: JOB }) };
 }
 
 const bullet = REWRITES.bullets[0]!;
