@@ -1,5 +1,7 @@
-import { FIT_BAND_LABELS, type AnalysisEvent, type Sections } from "../shared/report";
+import type { AnalysisEvent } from "../shared/report";
 import { streamAnalysis } from "./api";
+import { h } from "./dom";
+import { tabsFor } from "./render";
 import {
   addAnalysis,
   completeAnalysis,
@@ -8,6 +10,7 @@ import {
   getAnalysis,
   recordSection,
   setResume,
+  type Analysis,
   type Session,
 } from "./session";
 
@@ -33,19 +36,42 @@ function render(id: string) {
   const analysis = getAnalysis(session, id);
   if (!analysis) return;
   reportEl.hidden = false;
-  const assess = analysis.report.assess as Sections["assess"] | undefined;
-  $("fit").hidden = !assess;
-  if (assess) {
-    const band = $("fit-band");
-    band.textContent = FIT_BAND_LABELS[assess.fitBand];
-    band.dataset.band = assess.fitBand;
-    $("fit-reason").textContent = assess.reason;
-  }
+  renderTabs(analysis);
   statusEl.textContent =
     analysis.status === "running" ? (analysis.report.extract ? "Assessing your fit…" : "Reading your Resume and the Job Description…") : "";
   $("report-error").hidden = analysis.status !== "failed";
   $("report-error-text").textContent = analysis.error ?? "";
   analyseButton.disabled = analysis.status === "running";
+}
+
+let activeTab = "fit";
+
+function renderTabs(analysis: Analysis) {
+  const tabs = tabsFor(analysis);
+  const tablist = $("tabs");
+  const panel = $("tab-panel");
+  tablist.hidden = panel.hidden = tabs.length === 0;
+  if (!tabs.some((t) => t.id === activeTab)) activeTab = tabs[0]?.id ?? "fit";
+  tablist.replaceChildren(
+    ...tabs.map((t) => {
+      const selected = t.id === activeTab;
+      const button = h("button", { type: "button", role: "tab", id: `tab-${t.id}`, "aria-selected": String(selected), tabindex: selected ? "0" : "-1" }, t.label);
+      button.addEventListener("click", () => {
+        activeTab = t.id;
+        renderTabs(analysis);
+        document.getElementById(`tab-${t.id}`)?.focus();
+      });
+      button.addEventListener("keydown", (ev) => {
+        if (ev.key !== "ArrowRight" && ev.key !== "ArrowLeft") return;
+        const next = tabs[(tabs.indexOf(t) + (ev.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length];
+        if (next) document.getElementById(`tab-${next.id}`)?.click();
+      });
+      return button;
+    }),
+  );
+  const active = tabs.find((t) => t.id === activeTab);
+  panel.setAttribute("aria-labelledby", `tab-${activeTab}`);
+  panel.replaceChildren(active ? active.render() : "");
 }
 
 async function run(jobDescription: string) {

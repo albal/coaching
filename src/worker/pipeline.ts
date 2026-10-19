@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { sectionSchemas, type AnalysisEvent, type SectionName } from "../shared/report";
+import { constrainFitBand, sectionSchemas, type AnalysisEvent, type SectionName } from "../shared/report";
 import { UpstreamError, type GeminiClient } from "./gemini";
 import type { Logger } from "./log";
 import { COACH_SYSTEM, assessPrompt, extractPrompt, type AnalysisInput } from "./prompts";
@@ -54,6 +54,7 @@ export async function runAnalysis(
 ): Promise<void> {
   const extract = await runStep(gemini, log, "extract", extractPrompt(input));
   emit({ type: "section", section: "extract", data: extract });
-  const assess = await runStep(gemini, log, "assess", assessPrompt(input, extract));
+  const assessed = await runStep(gemini, log, "assess", assessPrompt(input, extract));
+  const assess = { ...assessed, fitBand: constrainFitBand(assessed.fitBand, assessed.requirements) };
   emit({ type: "section", section: "assess", data: assess });
 }
