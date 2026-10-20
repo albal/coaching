@@ -1,5 +1,7 @@
 // Cloudflare Turnstile, loaded only when a site key is configured. The token
 // is exchanged once for a pass; nothing is stored in the browser.
+import { currentTheme } from "./theme";
+
 
 interface TurnstileApi {
   render(el: HTMLElement, opts: Record<string, unknown>): string;
@@ -41,6 +43,7 @@ export function mountTurnstile(container: HTMLElement, siteKey: string): void {
       window.turnstile?.render(container, {
         sitekey: siteKey,
         action: "analyse",
+        theme: currentTheme(),
         callback: (t: string) => {
           token = t;
           state = "ready";

@@ -1,32 +1,20 @@
 :root {
-  --bg: #f7f8fa;
-  --surface: #ffffff;
-  --text: #1b1f24;
-  --muted: #5b6470;
-  --border: #d9dee5;
-  --accent: #1f6feb;
-  --accent-text: #ffffff;
-  --danger: #b42318;
-  --strong: #1a7f37;
-  --stretch: #9a6700;
-  --long: #b42318;
+  /* Follows the device until the visitor picks a theme (theme.ts). */
   color-scheme: light dark;
+  --bg: light-dark(#f5f5f4, #161616);
+  --surface: light-dark(#ffffff, #1f1f1f);
+  --text: light-dark(#1c1c1e, #ececec);
+  --muted: light-dark(#5f6368, #a3a3a3);
+  --border: light-dark(#dcdcda, #333333);
+  --accent: light-dark(#1f6feb, #4493f8);
+  --accent-text: light-dark(#ffffff, #161616);
+  --danger: light-dark(#b42318, #f85149);
+  --strong: light-dark(#1a7f37, #3fb950);
+  --stretch: light-dark(#9a6700, #d29922);
+  --long: light-dark(#b42318, #f85149);
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1117;
-    --surface: #161b22;
-    --text: #e6edf3;
-    --muted: #9da7b3;
-    --border: #30363d;
-    --accent: #4493f8;
-    --accent-text: #0d1117;
-    --danger: #f85149;
-    --strong: #3fb950;
-    --stretch: #d29922;
-    --long: #f85149;
-  }
-}
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body {
@@ -120,7 +108,9 @@ label.button {
 .visually-hidden:focus-visible + p, .visually-hidden:focus + p { outline: none; }
 .upload:focus-within label.button { outline: 3px solid var(--accent); outline-offset: 2px; }
 .visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
-.site-header { display: flex; justify-content: space-between; align-items: center; }
+.site-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.header-actions { display: flex; gap: 8px; }
+.theme-toggle { padding: 6px 12px; }
 .report-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
 .report-head h2 { margin: 0; }
 .actions { display: flex; flex-wrap: wrap; gap: 8px; }
