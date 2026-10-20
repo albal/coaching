@@ -80,7 +80,7 @@ Audience: English-speaking, mainly the UK/EU and US. The privacy notice is writt
 | **Session** | One visitor's time on the site, from first upload until the tab closes or they end it. It holds **one Resume** and **up to 3 Analyses**. |
 | **Analysis** | One Resume compared against one Job Description. Produces one Report. |
 | **Report** | Fit Band, Gaps, plan, resume rewrites and interview prep for one Analysis. |
-| **Coaching Chat** | Follow-up conversation about one Analysis. Capped at about 30 turns. |
+| **Coaching Chat** | Follow-up conversation about one Analysis. Capped at 5 questions. |
 | **Fit Band** | **Strong fit**: every Must-have has evidence. **Stretch**: 1–2 Must-have Gaps, each closable in about 3 months. **Long shot**: anything worse. Never shown as a number. |
 | **Gap** | A Job Description requirement the Resume shows only partial or no evidence for. |
 
@@ -170,7 +170,7 @@ Add another Job Description (up to 3 Analyses) ──► "Download all" ──�
 | F-40 | 10–20 likely questions: technical, scenario, system design, behavioural | Must |
 | F-41 | For each question: what's being tested, and which stories from the Resume to use | Must |
 | F-42 | Coaching Chat per Analysis, with Resume, Job Description and Report in context | Must |
-| F-43 | Cap the Coaching Chat at about 30 turns per Analysis, with a friendly message at the cap | Must |
+| F-43 | Cap the Coaching Chat at 5 questions per Analysis, with a friendly message at the cap | Must |
 | F-44 | Mock interview mode | v1.1 |
 
 ### 7.6 Download
@@ -262,7 +262,7 @@ Add another Job Description (up to 3 Analyses) ──► "Download all" ──�
 | **Turnstile** | Required before the first Analysis in a Session |
 | **Rate limit** | Workers rate-limiting binding, e.g. 5 Analyses per IP per hour |
 | **Daily cap** | Global daily limit on Analyses to protect AI spend. When reached, show "We're busy today — book a session with Al instead" |
-| **Token caps** | Max input size per request; Coaching Chat about 30 turns per Analysis |
+| **Token caps** | Max input size per request; Coaching Chat 5 questions per Analysis |
 | **Secrets** | Gemini key stored as a Worker secret, never sent to the browser |
 | **Transport** | HTTPS only, HSTS, strict CSP |
 | **Files** | Parsed in the browser, so no server-side file-parsing attack surface |

@@ -4,7 +4,7 @@ import type { ErrorCode } from "./report";
 // The Coaching Chat contract. The browser sends the whole conversation each
 // turn because the Worker keeps nothing (ADR-0001).
 
-export const MAX_CHAT_TURNS = 30;
+export const MAX_CHAT_TURNS = 5;
 
 export const chatTurnSchema = z.object({
   role: z.enum(["user", "model"]),
