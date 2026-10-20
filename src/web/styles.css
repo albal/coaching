@@ -118,6 +118,8 @@ label.button {
 a { color: var(--accent); }
 .ended { text-align: center; margin-top: 48px; }
 .ended h1:focus { outline: none; }
+.site-footer { max-width: 860px; margin: 40px auto 0; padding: 0 16px 24px; text-align: center; }
+.commit { color: var(--muted); font: 0.75rem ui-monospace, monospace; opacity: 0.6; }
 .print-only { display: none; }
 @media print {
   :root { color-scheme: light; --text: #000; --muted: #444; --border: #bbb; --bg: #fff; --surface: #fff; }
